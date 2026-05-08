@@ -1,0 +1,1 @@
+"""Basketball platform backend package."""
