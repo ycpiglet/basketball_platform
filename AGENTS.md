@@ -347,3 +347,46 @@ A task is complete only when the relevant items are satisfied:
 - Sensitive data masking considered
 - Documentation updated when needed
 - Edge cases or known limitations reported
+
+## 21. Current Repository Layout and Commands
+
+The repository currently uses this Phase 1-oriented layout:
+
+- `frontend/` - Vue.js + TypeScript app scaffold for Vercel, with MVP route placeholders under `src/features/`.
+- `backend/` - FastAPI app scaffold with API routers, core settings/logging/RBAC helpers, schemas, services, repositories, models, integrations, and tests.
+- `docs/architecture/` - planning and architecture notes.
+- `docs/operations/` - local development and operations notes.
+- `docker-compose.yml` - local PostgreSQL and MongoDB services only.
+
+Use these initial commands unless a later change updates the toolchain:
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+npm run lint
+npm run test
+npm run build
+```
+
+Backend:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[dev]'
+uvicorn app.main:app --reload
+pytest
+ruff check .
+```
+
+Databases:
+
+```bash
+docker compose up -d postgres mongodb
+```
+
+Do not add production authentication, payment, credit, gym reservation payment, ads, notification integrations, or RS-485/RF hardware control as part of the initial skeleton.

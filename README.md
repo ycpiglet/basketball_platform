@@ -130,9 +130,9 @@ Phase 2 candidates:
 - External advertising platform
 - Authentication and verification providers
 
-## Suggested Repository Structure
+## Repository Structure
 
-This is a recommended starting structure. Adjust only when the actual implementation requires it.
+The repository now contains an initial Phase 1 skeleton. Phase 2 feature directories and provider implementations should be added only after explicit approval.
 
 ```text
 .
@@ -140,16 +140,21 @@ This is a recommended starting structure. Adjust only when the actual implementa
 |- AGENTS.md
 |- requirements_en.md
 |- requirements_ko.md
+|- .env.example
+|- docker-compose.yml
 |- frontend/
 |  |- package.json
+|  |- vite.config.ts
+|  |- vitest.config.ts
+|  |- eslint.config.js
+|  |- .env.example
 |  |- src/
 |  |  |- app/
 |  |  |- routes/
-|  |  |- components/
 |  |  |- features/
-|  |  |  |- games/
 |  |  |  |- scoreboard/
 |  |  |  |- records/
+|  |  |  |- games/
 |  |  |  |- teams/
 |  |  |  |- players/
 |  |  |  |- leagues/
@@ -157,12 +162,11 @@ This is a recommended starting structure. Adjust only when the actual implementa
 |  |  |  |- community/
 |  |  |  |- intranet/
 |  |  |  |- documents/
-|  |  |  |- gyms/
-|  |  |  |- wallet/
 |  |  |- shared/
 |  |  |- tests/
 |- backend/
 |  |- pyproject.toml
+|  |- .env.example
 |  |- app/
 |  |  |- main.py
 |  |  |- api/
@@ -172,13 +176,11 @@ This is a recommended starting structure. Adjust only when the actual implementa
 |  |  |- services/
 |  |  |- repositories/
 |  |  |- integrations/
-|  |  |- tests/
+|  |- tests/
 |- docs/
-|  |- architecture/
-|  |- api/
-|  |- operations/
+|  |- architecture/initial_project_plan.md
+|  |- operations/local_development.md
 |- scripts/
-|- docker-compose.yml
 ```
 
 ## Core Domain Modules
@@ -275,9 +277,9 @@ Required logging targets:
 - Team roster changes
 - CRUD create/update/delete operations
 - PDF upload, parse, export, and failure events
-- Payment, credit, refund, and rollback events
+- Payment, credit, refund, and rollback events when Phase 2 is explicitly implemented
 - File upload and security rejection events
-- Hardware packet generation and transmission attempts
+- Hardware packet generation and transmission attempts only when future hardware integration is explicitly implemented
 
 Errors must not crash the app. Use clear user-facing messages and structured server logs.
 
@@ -294,16 +296,16 @@ Minimum test areas:
 - RBAC rules
 - Sensitive data masking
 - PDF parsing fallback to `N/A`
-- Payment rollback logic for Phase 2
-- Credit balance consistency for Phase 2
+- Payment rollback logic only when Phase 2 payment work is explicitly implemented
+- Credit balance consistency only when Phase 2 credit work is explicitly implemented
 - API validation failures
 - Frontend component behavior for critical UI flows
 
 ## Local Development
 
-The exact commands depend on the final repository setup. Once the frontend and backend folders exist, document the real commands here.
+See `docs/operations/local_development.md` for the detailed workflow.
 
-Suggested frontend commands:
+Frontend commands:
 
 ```bash
 cd frontend
@@ -314,42 +316,45 @@ npm run test
 npm run build
 ```
 
-Suggested backend commands:
+Backend commands:
 
 ```bash
 cd backend
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
-pytest
+pip install -e '.[dev]'
 uvicorn app.main:app --reload
+pytest
+ruff check .
 ```
 
-Suggested Docker command:
+Local database command:
 
 ```bash
-docker compose up --build
+docker compose up -d postgres mongodb
 ```
 
 ## Environment Variables
 
 Use `.env.example` files. Never commit real secrets.
 
-Candidate variables:
+Initial variables are documented in `.env.example`, `frontend/.env.example`, and `backend/.env.example`.
+
+Current Phase 1 skeleton variables include:
 
 ```text
+APP_NAME=
+APP_ENV=
+API_V1_PREFIX=
+CORS_ORIGINS=
 DATABASE_URL=
 MONGODB_URI=
-JWT_SECRET=
-CORS_ORIGINS=
-FILE_STORAGE_PATH=
-PAYMENT_PROVIDER_API_KEY=
-KAKAO_ALIMTALK_API_KEY=
-SMS_PROVIDER_API_KEY=
-AD_PROVIDER_KEY=
+LOG_LEVEL=
+VITE_API_BASE_URL=
+VITE_APP_ENV=
 ```
 
-Only add Phase 2 secrets when those integrations are actually implemented.
+Do not add Phase 2 payment, notification, verification, ad, or hardware secrets until those integrations are actually implemented.
 
 ## Definition of Done
 
@@ -368,11 +373,11 @@ A feature is not complete unless it includes:
 
 ## Current Repository Status
 
-This repository currently starts from planning and requirements documents. Implementation should begin with Phase 1 MVP foundations:
+The repository now has a Phase 1-oriented development skeleton:
 
-1. Frontend and backend project scaffolding
-2. Auth and RBAC skeleton
-3. Game model, team model, player model, and event model
-4. Scoreboard control panel and display route
-5. Digital score sheet event flow
-6. Logging, validation, and test infrastructure
+1. Vue + TypeScript frontend scaffold with Vite, Vue Router, Vitest, ESLint, MVP route placeholders, mobile-first styles, and development-only RBAC guard.
+2. FastAPI backend scaffold with health route, settings, CORS setup, structured logging helper, RBAC helper, pytest, and Ruff configuration.
+3. Docker Compose for local PostgreSQL and MongoDB only.
+4. Architecture and local development docs.
+
+Not yet implemented: production authentication, persistence models, migrations, game event APIs, CRUD APIs, PDF parsing/export, payment, credit, gym reservation payment, notification providers, ads, and production hardware control.
