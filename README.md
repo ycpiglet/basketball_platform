@@ -150,11 +150,12 @@ The repository now contains an initial Phase 1 skeleton. Phase 2 feature directo
 |  |- .env.example
 |  |- src/
 |  |  |- app/
+|  |  |  |- layouts/
 |  |  |- routes/
 |  |  |- features/
 |  |  |  |- scoreboard/
-|  |  |  |- records/
 |  |  |  |- games/
+|  |  |  |- dashboard/
 |  |  |  |- teams/
 |  |  |  |- players/
 |  |  |  |- leagues/
@@ -182,6 +183,23 @@ The repository now contains an initial Phase 1 skeleton. Phase 2 feature directo
 |  |- operations/local_development.md
 |- scripts/
 ```
+
+## Current Frontend Placeholder Routes
+
+The Phase 1 frontend shell currently registers only MVP placeholders. These routes intentionally do not include payment, credit, gym-rental payment, production authentication, advertising, notification, or RS-485/RF hardware-control flows.
+
+| Route | Purpose | Notes |
+|---|---|---|
+| `/` | Home route index | Links to MVP placeholder routes. |
+| `/dashboard` | Operations dashboard placeholder | Development RBAC guard only; production auth is not implemented. |
+| `/scoreboard/control` | Scoreboard control placeholder | Future touch-first score, timer, foul, and period controls. |
+| `/scoreboard/display` | Public display placeholder | Full-screen TV/HDMI display route with no admin navigation. |
+| `/games/:id/live` | Digital score sheet placeholder | Future live game event and correction workflow. |
+| `/games/:id/result` | Game result placeholder | Future final result and box score view. |
+| `/teams` | Teams CRUD placeholder | Future search, pagination, and permission-aware team actions. |
+| `/players` | Players CRUD placeholder | Future privacy-safe player list and profile summaries. |
+| `/leagues` | Leagues CRUD placeholder | Future league management and public results. |
+| `/tournaments` | Tournaments CRUD placeholder | Future bracket, game, result, and export workflows. |
 
 ## Core Domain Modules
 

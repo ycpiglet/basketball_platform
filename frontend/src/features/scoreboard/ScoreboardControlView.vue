@@ -1,18 +1,16 @@
-<template>
-  <main class="page-shell control-layout">
-    <section class="hero-card">
-      <p class="eyebrow">Restricted MVP route</p>
-      <h1>Scoreboard Control Panel</h1>
-      <p>Touch-first controls will manage score, timer, fouls, periods, and game finalization.</p>
-    </section>
+<script setup lang="ts">
+import PlaceholderPage from '@/shared/PlaceholderPage.vue';
+</script>
 
-    <section class="score-control-grid" aria-label="Score controls">
-      <button type="button">Home +1</button>
-      <button type="button">Home +2</button>
-      <button type="button">Home +3</button>
-      <button type="button">Away +1</button>
-      <button type="button">Away +2</button>
-      <button type="button">Away +3</button>
-    </section>
-  </main>
+<template>
+  <PlaceholderPage
+    eyebrow="Scoreboard"
+    title="Scoreboard Control Panel"
+    description="Touch-first controls for score, timer, fouls, periods, and game finalization will be designed here after the event model is defined."
+    :next-steps="[
+      'Define deterministic score and timer event contracts.',
+      'Add permission-aware API calls through backend services.',
+      'Add large tap targets and clear retry/error states for live game operation.',
+    ]"
+  />
 </template>
