@@ -13,7 +13,9 @@ Implemented now:
 - Global request middleware for request ids, request completion logs, and unhandled exception responses.
 - Structured HTTP and validation error responses.
 - Pydantic request validation pattern via `POST /api/v1/{resource}/validation-preview` placeholder endpoints.
-- Pytest setup with minimal health and error-handling tests.
+- Pytest setup with minimal health, error-handling, and model metadata tests.
+- Initial SQLAlchemy models for users, teams, players, leagues, tournaments, games, game events, and team memberships.
+- Alembic migration-ready scaffolding under `alembic/`.
 
 Not implemented in this Phase 1 backend foundation:
 
@@ -36,6 +38,17 @@ Not implemented in this Phase 1 backend foundation:
 | `GET /api/v1/tournaments` | Placeholder for future tournament CRUD, brackets, and result workflows. |
 | `GET /api/v1/scoreboard` | Placeholder for future scoreboard state and display synchronization APIs. |
 | `POST /api/v1/{resource}/validation-preview` | Pydantic validation example; accepts a `name` and optional `notes`. |
+
+## Data model
+
+The initial Phase 1 SQLAlchemy model is documented in `../docs/architecture/phase1_data_model.md`. It includes only MVP operational data and basic RBAC hooks. Production authentication and Phase 2 commercial tables are intentionally deferred.
+
+Migration scaffolding is available through Alembic. After installing dependencies and starting PostgreSQL, create and run the first migration from this directory with:
+
+```bash
+alembic revision --autogenerate -m "create phase 1 core tables"
+alembic upgrade head
+```
 
 ## Local commands
 
