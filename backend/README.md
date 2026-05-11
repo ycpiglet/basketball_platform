@@ -16,6 +16,7 @@ Implemented now:
 - Pytest setup with minimal health, error-handling, and model metadata tests.
 - Initial SQLAlchemy models for users, teams, players, leagues, tournaments, games, game events, and team memberships.
 - Alembic migration-ready scaffolding under `alembic/`.
+- Testable MVP scoreboard state service for score, clock, fouls, timeouts, player stats, and game-event log entries.
 
 Not implemented in this Phase 1 backend foundation:
 
@@ -24,6 +25,12 @@ Not implemented in this Phase 1 backend foundation:
 - Gym rental payment or commercial reservation flows.
 - Notification, advertising, or external verification providers.
 - RS-485/RF hardware control or packet transmission.
+
+## Scoreboard state service
+
+`app.services.scoreboard_state.ScoreboardStateService` contains the first pure-Python scoreboard state model. It is intentionally independent from the Vue UI, database persistence, WebSocket transport, and hardware control. State-changing methods validate inputs, append an in-memory game-event log entry, and emit a structured application log.
+
+Covered MVP state fields include home/away score, quarter and clock status, team fouls, timeout counts, player points, player fouls, game status, and event sequencing.
 
 ## Placeholder API routes
 
