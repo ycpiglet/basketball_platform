@@ -1,6 +1,7 @@
 import tsParser from '@typescript-eslint/parser';
 import vue from 'eslint-plugin-vue';
 import typescript from '@typescript-eslint/eslint-plugin';
+import vueParser from 'vue-eslint-parser';
 
 export default [
   {
@@ -8,7 +9,18 @@ export default [
   },
   ...vue.configs['flat/recommended'],
   {
-    files: ['**/*.{ts,vue}'],
+    files: ['**/*.vue'],
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        parser: tsParser,
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+  },
+  {
+    files: ['**/*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
