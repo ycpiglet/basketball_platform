@@ -12,6 +12,12 @@ Use these files as the product requirements:
 
 If requirements conflict, do not silently choose the smaller scope. Preserve the more specific requirement and ask the product owner before removing, narrowing, or reclassifying any requirement.
 
+Derived or dated requirements may live under `docs/requirements/`. They do not
+replace the source-of-truth files unless the product owner explicitly says so.
+When creating a new requirements document, keep prior documents, add a dated
+summary under `docs/requirements/archive/`, and link the new document from
+`summary/status.md`.
+
 ## 2. Product Mental Model
 
 This is not just a scoreboard UI. It is an amateur basketball operations ecosystem.
@@ -348,7 +354,52 @@ A task is complete only when the relevant items are satisfied:
 - Documentation updated when needed
 - Edge cases or known limitations reported
 
-## 21. Current Repository Layout and Commands
+## 21. Harness Engineering Records
+
+For substantial multi-agent work, use `harness/` to keep planning, generation,
+evaluation, debugging, testing, validation, and deployment context aligned.
+
+Project-local skills live under `harness/skills/`. They refine engineering
+practice for a domain, but they do not replace product requirements or authorize
+Phase 2 scope.
+
+Use `harness/sandbox/` for experiments, spikes, risky attempts, and disposable
+prototypes before they become product work. Failed sandbox work should be marked
+rejected or deferred, not deleted.
+
+Use `harness/compound/` for durable synthesis across runs, issues, debugging,
+tests, decisions, and sandbox results. Each substantial run should create or
+update compound records so future agents know what to reuse, what to avoid, and
+what to do next.
+
+New harness records should include YAML frontmatter using
+`harness/metadata_schema.md`.
+
+Use `harness/skills/python_coding/SKILL.md` whenever writing, reviewing, or
+refactoring Python code, including FastAPI backend code, repositories, services,
+models, schemas, backend tests, scripts, document processing, and integrations.
+Record this in the run context and plan when it applies.
+
+Minimum role files:
+
+- `harness/agents/planner.md`
+- `harness/agents/generator.md`
+- `harness/agents/evaluator.md`
+- `harness/agents/coordinator.md`
+
+Run folders should use:
+
+```text
+harness/runs/YYYY-MM-DD_short_slug/
+```
+
+Copy the files from `harness/runs/_template/` and keep the numbered file names
+stable so other agents can resume in order.
+
+Update `summary/status.md` when a run closes or when direction-changing context
+needs to be visible outside a single run.
+
+## 22. Current Repository Layout and Commands
 
 The repository currently uses this Phase 1-oriented layout:
 
@@ -356,6 +407,12 @@ The repository currently uses this Phase 1-oriented layout:
 - `backend/` - FastAPI app scaffold with API routers, core settings/logging/RBAC helpers, schemas, services, repositories, models, integrations, and tests.
 - `docs/architecture/` - planning and architecture notes.
 - `docs/operations/` - local development and operations notes.
+- `harness/` - multi-agent planning, generation, evaluation, validation, and handoff records.
+- `harness/skills/python_coding/SKILL.md` - project-local Python coding standard for agents.
+- `harness/sandbox/` - isolated experiments and promotion reviews.
+- `harness/compound/` - searchable synthesized knowledge, lessons, patterns, and current state.
+- `docs/requirements/` - dated derived requirements and archive summaries.
+- `summary/status.md` - high-level status index for completed or active harness runs.
 - `docker-compose.yml` - local PostgreSQL and MongoDB services only.
 
 Use these initial commands unless a later change updates the toolchain:

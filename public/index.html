@@ -1,0 +1,1717 @@
+<!--
+  basketball_platform_prototype_v3_information_architecture_refined.html
+
+  Purpose:
+  - A single-file HTML/CSS/vanilla JavaScript prototype that reframes the amateur basketball platform as an official service homepage plus real-time game-operation tool.
+  - It preserves the Phase 1 MVP prototype behavior: screen navigation, scoreboard state, home/away score controls, quarter controls, game clock controls, team fouls, timeout counts, player stat demo, event log, undo, and localStorage persistence.
+  - It applies the attached Apple-inspired design language as a reference only: clean typography, large section rhythm, Action Blue (#0066cc), near-black ink, white/parchment canvases, dark tile surfaces, pill buttons, and hairline borders.
+  - It does not copy Apple branding, Apple logos, Apple product imagery, Apple copy, or trademarked visual assets.
+  - This is not production code. It intentionally does not implement production authentication, payment, credits, wallet, gym rental booking, database APIs, real PDF parsing, or RS-485/RF hardware control.
+  - Use this file as a UX and information-architecture reference for the future Vue/FastAPI implementation.
+
+  Future Vue/FastAPI mapping:
+  - Each .screen should become a route-level Vue component.
+  - LiveBoxScore, GameControlPanel, DigitalScoreSheet, PublicScoreboardDisplay, CommunityBoard, TeamRoster, and CRUDTable should become reusable components.
+  - gameState should become server-authoritative FastAPI/Pydantic state synchronized by WebSocket or SSE.
+  - localStorage is used only for this local prototype; it is not a database or authentication store.
+-->
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>아마추어 농구 통합 플랫폼 · IA Refined Prototype v3</title>
+  <style>
+    /* 1. ROOT TOKENS ----------------------------------------------------- */
+    :root {
+      color-scheme: light;
+      --font-display: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-text: "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+      --color-primary: #0066cc;
+      --color-primary-focus: #0071e3;
+      --color-primary-on-dark: #2997ff;
+      --color-on-primary: #ffffff;
+
+      --color-ink: #1d1d1f;
+      --color-muted: #7a7a7a;
+      --color-muted-strong: #333333;
+      --color-canvas: #ffffff;
+      --color-canvas-parchment: #f5f5f7;
+      --color-surface-pearl: #fafafc;
+      --color-surface-tile-1: #272729;
+      --color-surface-tile-2: #2a2a2c;
+      --color-surface-tile-3: #252527;
+      --color-surface-black: #000000;
+      --color-hairline: #e0e0e0;
+      --color-divider-soft: #f0f0f0;
+
+      --color-success-bg: #edf8f1;
+      --color-success-ink: #146c2e;
+      --color-warning-bg: #fff8e5;
+      --color-warning-ink: #7a4b00;
+      --color-danger-bg: #fff1f0;
+      --color-danger-ink: #a01616;
+      --color-info-bg: #edf5ff;
+      --color-info-ink: #004b9b;
+
+      /* Scoreboard-specific colors are intentionally stronger than the marketing UI. */
+      --scoreboard-bg: #000000;
+      --scoreboard-panel: #101010;
+      --scoreboard-panel-2: #181818;
+      --scoreboard-line: rgba(255, 255, 255, 0.18);
+      --score-home: #ffd60a;
+      --score-away: #2997ff;
+      --score-clock: #ffffff;
+      --score-shot: #ff453a;
+      --score-muted: #b8b8b8;
+
+      --radius-xs: 5px;
+      --radius-sm: 8px;
+      --radius-md: 11px;
+      --radius-lg: 18px;
+      --radius-xl: 28px;
+      --radius-pill: 9999px;
+
+      --space-xxs: 4px;
+      --space-xs: 8px;
+      --space-sm: 12px;
+      --space-md: 17px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --space-xxl: 48px;
+      --space-section: 80px;
+
+      --container: 1440px;
+      --text-container: 980px;
+      --nav-height: 44px;
+      --subnav-height: 52px;
+      --touch: 44px;
+      --control-touch: 64px;
+
+      --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+    }
+
+    /* 2. TYPOGRAPHY ------------------------------------------------------ */
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--color-canvas-parchment);
+      color: var(--color-ink);
+      font-family: var(--font-text);
+      font-size: 17px;
+      line-height: 1.47;
+      letter-spacing: -0.374px;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled, [data-disabled="true"] { cursor: not-allowed; opacity: 0.52; }
+    h1, h2, h3, p { margin: 0; }
+    h1, h2, h3, .display-title, .hero-title {
+      font-family: var(--font-display);
+      letter-spacing: -0.028em;
+      line-height: 1.07;
+      font-weight: 600;
+    }
+    h1, .hero-title { font-size: clamp(38px, 7vw, 72px); }
+    h2, .section-title { font-size: clamp(32px, 4.2vw, 56px); }
+    h3, .subhead { font-size: clamp(22px, 2.6vw, 34px); }
+    .lead {
+      font-family: var(--font-display);
+      font-size: clamp(21px, 3vw, 28px);
+      line-height: 1.18;
+      letter-spacing: 0.01em;
+      color: var(--color-muted-strong);
+    }
+    .body-large { font-size: 21px; line-height: 1.38; letter-spacing: -0.26px; }
+    .muted { color: var(--color-muted); }
+    .fine { font-size: 12px; line-height: 1.35; letter-spacing: -0.12px; color: var(--color-muted); }
+    .caption { font-size: 14px; line-height: 1.43; letter-spacing: -0.224px; color: var(--color-muted); }
+    .strong { font-weight: 600; color: var(--color-ink); }
+    .number, .score-number, .game-clock, .shot-number, .metric-value { font-variant-numeric: tabular-nums; }
+
+    /* 3. LAYOUT ---------------------------------------------------------- */
+    .app-shell { min-height: 100vh; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .container {
+      width: min(100%, var(--container));
+      margin: 0 auto;
+      padding-inline: clamp(16px, 3vw, 32px);
+    }
+    .narrow { max-width: var(--text-container); margin-inline: auto; }
+    .product-section {
+      min-height: 72vh;
+      padding: clamp(56px, 8vw, var(--space-section)) 0;
+      display: flex;
+      align-items: center;
+      background: var(--color-canvas);
+    }
+    .product-section.parchment { background: var(--color-canvas-parchment); }
+    .product-section.dark {
+      background: var(--color-surface-tile-1);
+      color: #ffffff;
+    }
+    .product-section.dark .muted,
+    .product-section.dark .caption,
+    .product-section.dark .lead { color: #cccccc; }
+    .section-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-lg);
+      align-items: end;
+      margin-bottom: clamp(24px, 4vw, 44px);
+    }
+    .section-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: var(--color-primary);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.224px;
+    }
+    .dark .section-kicker { color: var(--color-primary-on-dark); }
+    .two-column {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      gap: clamp(24px, 4vw, 56px);
+      align-items: center;
+    }
+    .three-column { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+    .four-column { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .stack { display: grid; gap: 16px; }
+    .stack-lg { display: grid; gap: 24px; }
+    .center { text-align: center; }
+    .full-bleed { width: 100%; }
+    .screen-pad { padding: clamp(24px, 5vw, 56px) 0 80px; }
+    .top-live-wrap { padding-top: 24px; }
+    .inline-list { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .split-row { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+
+    /* 4. NAVIGATION ------------------------------------------------------ */
+    .global-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--nav-height);
+      background: var(--color-surface-black);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      line-height: 1;
+      letter-spacing: -0.12px;
+    }
+    .global-nav-inner {
+      width: min(100%, var(--container));
+      margin: 0 auto;
+      padding: 0 clamp(16px, 3vw, 32px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+    .brand {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: #fff;
+      white-space: nowrap;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+      border: 1px solid rgba(255,255,255,0.48);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+    .global-links { display: flex; gap: clamp(12px, 2vw, 22px); align-items: center; }
+    .global-links button,
+    .global-links a {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,0.82);
+      padding: 0;
+      min-height: 32px;
+      text-decoration: none;
+    }
+    .global-links button:hover,
+    .global-links a:hover { color: #ffffff; }
+    .sub-nav {
+      position: sticky;
+      top: var(--nav-height);
+      z-index: 45;
+      min-height: var(--subnav-height);
+      background: rgba(245,245,247,0.86);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      backdrop-filter: saturate(180%) blur(20px);
+    }
+    .sub-nav-inner {
+      width: min(100%, var(--container));
+      margin: 0 auto;
+      min-height: var(--subnav-height);
+      padding: 0 clamp(16px, 3vw, 32px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .sub-title {
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.19;
+      letter-spacing: 0.231px;
+      white-space: nowrap;
+    }
+    .nav-scroll { display: flex; gap: 6px; align-items: center; overflow-x: auto; scrollbar-width: none; }
+    .nav-scroll::-webkit-scrollbar { display: none; }
+    .navBtn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      min-height: 38px;
+      padding: 8px 12px;
+      border-radius: var(--radius-pill);
+      color: var(--color-muted-strong);
+      font-size: 14px;
+      line-height: 1.29;
+      letter-spacing: -0.224px;
+      white-space: nowrap;
+    }
+    .navBtn.active,
+    .navBtn:hover { color: var(--color-primary); background: #ffffff; border-color: var(--color-hairline); }
+    body.display-mode .global-nav,
+    body.display-mode .sub-nav { display: none; }
+
+    /* 5. BUTTONS --------------------------------------------------------- */
+    .btn,
+    .btnMini,
+    .btnLarge,
+    .btnGhost,
+    .btnDark,
+    .btnScore,
+    .btnDanger,
+    .btnSuccess,
+    .btnWarn {
+      appearance: none;
+      border: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: var(--touch);
+      border-radius: var(--radius-pill);
+      padding: 11px 22px;
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -0.224px;
+      text-decoration: none;
+      transition: transform 120ms ease, background-color 120ms ease, border-color 120ms ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:active,
+    .btnMini:active,
+    .btnLarge:active,
+    .btnGhost:active,
+    .btnDark:active,
+    .btnScore:active,
+    .btnDanger:active,
+    .btnSuccess:active,
+    .btnWarn:active { transform: scale(0.95); }
+    .btn:focus-visible,
+    .btnMini:focus-visible,
+    .btnLarge:focus-visible,
+    .btnGhost:focus-visible,
+    .btnDark:focus-visible,
+    .btnScore:focus-visible,
+    .btnDanger:focus-visible,
+    .btnSuccess:focus-visible,
+    .btnWarn:focus-visible,
+    .navBtn:focus-visible,
+    input:focus-visible,
+    select:focus-visible { outline: 2px solid var(--color-primary-focus); outline-offset: 2px; }
+    .btn, .btnLarge { background: var(--color-primary); color: #ffffff; }
+    .btnLarge { min-height: 56px; padding: 14px 28px; font-size: 18px; font-weight: 300; }
+    .btnGhost { background: var(--color-canvas); color: var(--color-primary); border: 1px solid var(--color-primary); }
+    .btnDark { background: var(--color-ink); color: #ffffff; border-radius: var(--radius-sm); padding: 8px 15px; font-size: 14px; }
+    .btnMini { background: var(--color-surface-pearl); color: var(--color-muted-strong); border: 1px solid var(--color-hairline); padding: 8px 14px; min-height: 40px; font-size: 14px; }
+    .btnScore { min-height: var(--control-touch); padding: 14px 18px; border-radius: var(--radius-lg); background: var(--color-primary); color: #ffffff; font-size: 20px; font-weight: 600; }
+    .btnDanger { background: var(--color-danger-bg); color: var(--color-danger-ink); border: 1px solid rgba(160,22,22,0.16); }
+    .btnSuccess { background: var(--color-success-bg); color: var(--color-success-ink); border: 1px solid rgba(20,108,46,0.16); }
+    .btnWarn { background: var(--color-warning-bg); color: var(--color-warning-ink); border: 1px solid rgba(122,75,0,0.18); }
+    .button-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .button-row.centered { justify-content: center; }
+    .link-button {
+      border: 0;
+      background: transparent;
+      color: var(--color-primary);
+      min-height: 44px;
+      padding: 0;
+    }
+    .dark .btnGhost { background: transparent; color: var(--color-primary-on-dark); border-color: var(--color-primary-on-dark); }
+
+    /* 6. CARDS AND TILES ------------------------------------------------- */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(380px, 1.05fr);
+      gap: clamp(28px, 5vw, 72px);
+      align-items: center;
+    }
+    .hero-copy { display: grid; gap: 22px; }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag,
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 6px 10px;
+      border-radius: var(--radius-pill);
+      background: var(--color-surface-pearl);
+      border: 1px solid var(--color-hairline);
+      color: var(--color-muted-strong);
+      font-size: 13px;
+      line-height: 1;
+      letter-spacing: -0.18px;
+      white-space: nowrap;
+    }
+    .tag.live, .status-chip.live { background: var(--color-info-bg); color: var(--color-info-ink); border-color: rgba(0,102,204,0.18); }
+    .tag.warn { background: var(--color-warning-bg); color: var(--color-warning-ink); border-color: rgba(122,75,0,0.18); }
+    .tag.dark { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.18); color: #ffffff; }
+    .utility-card,
+    .data-card,
+    .panel,
+    .feature-card {
+      background: var(--color-canvas);
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+    }
+    .feature-card {
+      display: grid;
+      min-height: 170px;
+      align-content: space-between;
+      gap: 16px;
+      text-align: left;
+      color: var(--color-ink);
+      text-decoration: none;
+    }
+    button.feature-card { width: 100%; appearance: none; }
+    .feature-card:hover { border-color: rgba(0,102,204,0.42); }
+    .feature-card .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--color-info-bg);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+    .feature-card h3 { font-size: 22px; letter-spacing: -0.02em; }
+    .feature-card p { color: var(--color-muted); font-size: 15px; }
+    .dark .feature-card,
+    .dark .utility-card,
+    .dark .panel { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); color: #ffffff; }
+    .dark .feature-card p, .dark .utility-card .muted { color: #cccccc; }
+    .product-object {
+      background: var(--color-surface-black);
+      color: #ffffff;
+      border-radius: 36px;
+      padding: clamp(20px, 4vw, 36px);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: var(--shadow-product);
+    }
+    .mini-display {
+      background: #050505;
+      border-radius: 28px;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .mini-display-score { display: grid; grid-template-columns: 1fr auto 1fr; gap: 18px; align-items: center; }
+    .mini-display-team { display: grid; gap: 6px; text-align: center; }
+    .mini-display-team strong { font-size: clamp(34px, 5vw, 72px); line-height: 1; color: var(--score-home); }
+    .mini-display-team.away strong { color: var(--score-away); }
+    .mini-display-clock { font-size: clamp(28px, 4vw, 54px); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .section-tabs { display: inline-flex; gap: 6px; padding: 4px; border-radius: var(--radius-pill); background: var(--color-surface-pearl); border: 1px solid var(--color-hairline); overflow-x: auto; max-width: 100%; }
+    .tabBtn {
+      border: 0;
+      background: transparent;
+      color: var(--color-muted-strong);
+      min-height: 40px;
+      border-radius: var(--radius-pill);
+      padding: 8px 14px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .tabBtn.active { background: var(--color-primary); color: #ffffff; }
+    .tabPanel { display: none; }
+    .tabPanel.active { display: block; }
+    .phase2-stub { opacity: 0.68; }
+
+    /* 7. SCOREBOARD-SPECIFIC COMPONENTS --------------------------------- */
+    .live-box-score {
+      background: var(--color-canvas);
+      border: 1px solid var(--color-hairline);
+      border-radius: 34px;
+      padding: clamp(16px, 2.6vw, 28px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 0.82fr) minmax(0, 1fr);
+      gap: clamp(14px, 2vw, 24px);
+      align-items: stretch;
+    }
+    .live-box-score.dark-live {
+      background: #0a0a0a;
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.18);
+    }
+    .team-status {
+      border: 1px solid var(--color-hairline);
+      border-radius: 28px;
+      padding: clamp(16px, 2vw, 24px);
+      display: grid;
+      gap: 18px;
+      background: var(--color-surface-pearl);
+    }
+    .dark-live .team-status { background: #141414; border-color: rgba(255,255,255,0.16); }
+    .team-status.home-side { border-left: 6px solid var(--score-home); }
+    .team-status.away-side { border-right: 6px solid var(--score-away); }
+    .team-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .team-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .team-logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--color-hairline);
+      background: #ffffff;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+    .dark-live .team-logo { background: #050505; border-color: rgba(255,255,255,0.2); }
+    .team-name { font-size: clamp(20px, 2vw, 28px); font-weight: 600; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .team-label { font-size: 12px; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .dark-live .team-label, .dark-live .muted { color: #b8b8b8; }
+    .score-number {
+      font-family: var(--font-display);
+      font-size: clamp(72px, 11vw, 148px);
+      line-height: 0.88;
+      font-weight: 700;
+      letter-spacing: -0.06em;
+    }
+    .home-side .score-number { color: var(--score-home); }
+    .away-side .score-number { color: var(--score-away); }
+    .team-metrics { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+    .metric-tile {
+      min-height: 62px;
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      display: grid;
+      align-content: center;
+      gap: 2px;
+      background: #ffffff;
+    }
+    .dark-live .metric-tile { background: #0a0a0a; border-color: rgba(255,255,255,0.14); }
+    .metric-label { font-size: 12px; color: var(--color-muted); line-height: 1.1; }
+    .metric-value { font-size: 24px; font-weight: 700; line-height: 1; }
+    .lineup-strip { display: grid; gap: 8px; }
+    .lineup-title { font-size: 13px; font-weight: 600; color: var(--color-muted-strong); }
+    .dark-live .lineup-title { color: #ffffff; }
+    .lineup-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .player-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 5px 9px;
+      border-radius: var(--radius-pill);
+      background: #ffffff;
+      border: 1px solid var(--color-hairline);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .dark-live .player-pill { background: #050505; border-color: rgba(255,255,255,0.18); color: #ffffff; }
+    .player-pill .jersey-dot { font-weight: 700; color: var(--color-primary); }
+    .game-core {
+      border-radius: 28px;
+      background: var(--color-surface-black);
+      color: #ffffff;
+      padding: clamp(18px, 2.4vw, 28px);
+      display: grid;
+      align-content: center;
+      text-align: center;
+      gap: 16px;
+      min-height: 100%;
+    }
+    .game-clock {
+      font-family: var(--font-display);
+      font-size: clamp(54px, 7vw, 98px);
+      line-height: 0.92;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      color: var(--score-clock);
+    }
+    .game-quarter { font-size: 24px; font-weight: 700; color: var(--score-home); }
+    .shot-clock-tile {
+      display: inline-grid;
+      justify-self: center;
+      min-width: 148px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 22px;
+      padding: 12px 18px;
+      background: #151515;
+    }
+    .shot-label { font-size: 12px; color: #b8b8b8; text-transform: uppercase; letter-spacing: 0.08em; }
+    .shot-number { font-size: clamp(42px, 5vw, 72px); font-weight: 800; color: var(--score-shot); line-height: 0.92; }
+    .possession-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+    .possession-arrow { color: var(--score-home); font-size: 24px; line-height: 1; }
+    .recent-events-compact { display: grid; gap: 7px; text-align: left; }
+    .event-mini {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 10px;
+      padding: 8px 0;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      font-size: 13px;
+      color: #e8e8e8;
+    }
+    .event-mini-time { color: var(--score-home); font-weight: 700; }
+    .control-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr) minmax(0, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+    .control-team-panel { display: grid; gap: 16px; }
+    .score-control-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .aux-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .timer-panel { display: grid; gap: 12px; align-content: start; }
+    .timer-face {
+      padding: 22px;
+      border-radius: 28px;
+      background: var(--color-surface-black);
+      color: #ffffff;
+      text-align: center;
+    }
+    .timer-face .game-clock { font-size: clamp(48px, 6vw, 76px); }
+    .timer-button-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .timer-button-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .display-toolbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 16px clamp(16px, 3vw, 32px);
+      background: #050505;
+      color: #ffffff;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+    }
+    .display-stage { min-height: 100vh; background: #000; padding: clamp(12px, 2vw, 28px); }
+    .scoreboard-display {
+      min-height: calc(100vh - 108px);
+      background: #000;
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 24px;
+      padding: clamp(16px, 2.3vw, 34px);
+      display: grid;
+      gap: clamp(12px, 1.6vw, 22px);
+      grid-template-rows: auto 1fr auto;
+    }
+    .scoreboard-display.compact { --display-score: clamp(62px, 11vw, 150px); --display-clock: clamp(44px, 8vw, 104px); --display-shot: clamp(42px, 6vw, 88px); }
+    .scoreboard-display.standard { --display-score: clamp(86px, 14vw, 210px); --display-clock: clamp(54px, 9vw, 132px); --display-shot: clamp(54px, 7vw, 110px); }
+    .scoreboard-display.large { --display-score: clamp(110px, 18vw, 286px); --display-clock: clamp(70px, 12vw, 172px); --display-shot: clamp(70px, 9vw, 142px); }
+    .display-top { display: flex; justify-content: space-between; align-items: center; gap: 18px; color: var(--score-muted); font-size: clamp(14px, 1.4vw, 24px); text-transform: uppercase; letter-spacing: 0.08em; }
+    .display-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr) minmax(0, 1fr); gap: clamp(14px, 2.4vw, 32px); align-items: center; }
+    .display-team { display: grid; gap: 16px; text-align: center; align-content: center; min-width: 0; }
+    .display-team-name { font-size: clamp(26px, 4vw, 58px); font-weight: 700; letter-spacing: -0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .display-team.home .display-score { color: var(--score-home); }
+    .display-team.away .display-score { color: var(--score-away); }
+    .display-score { font-size: var(--display-score); font-family: var(--font-display); font-weight: 800; line-height: 0.82; letter-spacing: -0.08em; }
+    .display-center { display: grid; gap: 18px; text-align: center; justify-items: center; }
+    .display-clock { font-size: var(--display-clock); font-weight: 800; line-height: 0.9; letter-spacing: -0.06em; font-variant-numeric: tabular-nums; }
+    .display-shot { min-width: 160px; padding: 12px 22px; border: 2px solid var(--score-shot); border-radius: 24px; }
+    .display-shot strong { display: block; color: var(--score-shot); font-size: var(--display-shot); line-height: 0.9; font-variant-numeric: tabular-nums; }
+    .display-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .display-metric { border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 10px; background: #101010; }
+    .display-metric span { display: block; color: var(--score-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .display-metric strong { font-size: clamp(24px, 3vw, 44px); line-height: 1; }
+    .display-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+    .display-info-panel { background: #101010; border: 1px solid rgba(255,255,255,0.16); border-radius: 20px; padding: 14px; min-width: 0; }
+    .display-lineup { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .display-lineup span { border: 1px solid rgba(255,255,255,0.18); border-radius: var(--radius-pill); padding: 6px 9px; font-size: clamp(12px, 1.2vw, 18px); white-space: nowrap; }
+
+    /* 8. TABLES AND CRUD SCREENS ---------------------------------------- */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .input, .select {
+      min-height: 44px;
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--radius-pill);
+      background: #ffffff;
+      color: var(--color-ink);
+      padding: 11px 16px;
+      min-width: min(240px, 100%);
+    }
+    .table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); background: #ffffff; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 14px 16px; border-bottom: 1px solid var(--color-divider-soft); text-align: left; vertical-align: middle; }
+    th { font-size: 13px; color: var(--color-muted); font-weight: 600; background: var(--color-surface-pearl); }
+    td { font-size: 15px; }
+    tr:last-child td { border-bottom: 0; }
+    .data-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .data-card-header { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 12px; }
+    .masked { filter: blur(3px); user-select: none; }
+    .empty-state { padding: 28px; text-align: center; color: var(--color-muted); border: 1px dashed var(--color-hairline); border-radius: var(--radius-lg); background: var(--color-surface-pearl); }
+    .roster-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .roster-list { display: grid; gap: 8px; }
+    .player-row {
+      display: grid;
+      grid-template-columns: 44px minmax(0,1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--color-hairline);
+      border-radius: var(--radius-lg);
+      background: #ffffff;
+    }
+    .player-row.on-court { border-color: rgba(0,102,204,0.38); background: var(--color-info-bg); }
+    .jersey {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--color-ink);
+      color: #ffffff;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .player-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+    .record-card { padding: 14px; border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); background: #ffffff; display: grid; gap: 10px; }
+    .record-card.on-court { background: var(--color-info-bg); border-color: rgba(0,102,204,0.32); }
+    .record-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .event-log { max-height: 460px; overflow: auto; display: grid; gap: 8px; }
+    .event-item { display: grid; grid-template-columns: 68px minmax(0,1fr); gap: 12px; padding: 12px; border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); background: #ffffff; }
+    .event-time { color: var(--color-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* Community board: cafe-style dense list, not social cards. */
+    .community-board { background: #ffffff; border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); overflow: hidden; }
+    .board-tabs { display: flex; gap: 6px; padding: 12px; overflow-x: auto; border-bottom: 1px solid var(--color-divider-soft); }
+    .board-list { width: 100%; overflow-x: auto; }
+    .board-row.pinned td { background: var(--color-info-bg); }
+    .board-title { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--color-ink); text-decoration: none; }
+    .comment-count { color: var(--color-primary); font-weight: 600; }
+    .mobile-board-list { display: none; }
+
+    /* 9. RESPONSIVE RULES ----------------------------------------------- */
+    @media (min-width: 1441px) {
+      .container, .global-nav-inner, .sub-nav-inner { max-width: 1440px; }
+    }
+    @media (max-width: 1068px) {
+      .hero-grid, .two-column, .control-grid, .display-main { grid-template-columns: 1fr; }
+      .three-column, .four-column, .data-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .live-box-score { grid-template-columns: 1fr; }
+      .game-core { order: -1; }
+      .team-status.away-side { border-left: 6px solid var(--score-away); border-right: 1px solid var(--color-hairline); }
+      .dark-live .team-status.away-side { border-right-color: rgba(255,255,255,0.16); }
+    }
+    @media (max-width: 833px) {
+      .global-links { display: none; }
+      .sub-nav-inner { align-items: stretch; flex-direction: column; padding-block: 8px; }
+      .sub-title { font-size: 18px; }
+      .product-section { min-height: auto; padding-block: 56px; }
+      .section-header { grid-template-columns: 1fr; align-items: start; }
+      .display-bottom { grid-template-columns: 1fr; }
+      .display-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .roster-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      body { font-size: 16px; }
+      .container { padding-inline: 14px; }
+      .three-column, .four-column, .data-grid { grid-template-columns: 1fr; }
+      .feature-card { min-height: 140px; }
+      .team-metrics { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .score-control-grid, .aux-control-grid, .timer-button-grid, .timer-button-grid.three { grid-template-columns: 1fr; }
+      .button-row { align-items: stretch; }
+      .button-row > * { flex: 1 1 auto; }
+      .table-wrap table.community-table { display: none; }
+      .mobile-board-list { display: grid; gap: 0; }
+      .mobile-post { padding: 14px 16px; border-bottom: 1px solid var(--color-divider-soft); display: grid; gap: 6px; }
+      .mobile-post:last-child { border-bottom: 0; }
+      .player-row { grid-template-columns: 40px minmax(0,1fr); }
+      .player-actions { grid-column: 1 / -1; justify-content: stretch; }
+      .player-actions .btnMini { flex: 1 1 72px; }
+      .display-toolbar { align-items: stretch; flex-direction: column; }
+      .scoreboard-display { border-radius: 0; border-left: 0; border-right: 0; min-height: calc(100vh - 120px); }
+    }
+    @media (max-width: 419px) {
+      .hero-title { font-size: 34px; }
+      .section-title { font-size: 30px; }
+      .lead { font-size: 20px; }
+      .team-logo { width: 44px; height: 44px; }
+      .score-number { font-size: 64px; }
+      .game-clock { font-size: 48px; }
+      .metric-tile { min-height: 54px; padding: 8px; }
+      .metric-value { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="global-nav" aria-label="Global navigation">
+      <div class="global-nav-inner">
+        <button class="brand" data-screen="home" aria-label="홈으로 이동">
+          <span class="brand-mark">B</span>
+          <span>BasketOps MVP</span>
+        </button>
+        <nav class="global-links" aria-label="Top links">
+          <button data-screen="control">경기 운영</button>
+          <button data-screen="community">커뮤니티</button>
+          <button data-screen="support">지원</button>
+          <button data-screen="dashboard">마이페이지</button>
+          <button data-disabled="true" data-screen="wallet">Wallet · Coming later</button>
+        </nav>
+      </div>
+    </header>
+
+    <nav class="sub-nav" aria-label="Primary sections">
+      <div class="sub-nav-inner">
+        <div class="sub-title">아마추어 농구 통합 플랫폼</div>
+        <div class="nav-scroll" role="list">
+          <button class="navBtn active" data-screen="home">홈</button>
+          <button class="navBtn" data-screen="control">스코어보드 조작</button>
+          <button class="navBtn" data-screen="display">전광판 표시</button>
+          <button class="navBtn" data-screen="score-sheet">디지털 기록지</button>
+          <button class="navBtn" data-screen="result">경기 결과</button>
+          <button class="navBtn" data-screen="teams">팀</button>
+          <button class="navBtn" data-screen="players">선수</button>
+          <button class="navBtn" data-screen="leagues">리그</button>
+          <button class="navBtn" data-screen="tournaments">대회</button>
+          <button class="navBtn" data-screen="pickup">픽업/게스트</button>
+          <button class="navBtn" data-screen="intranet">팀 인트라넷</button>
+          <button class="navBtn" data-screen="community">커뮤니티</button>
+          <button class="navBtn" data-screen="support">공지/매뉴얼</button>
+          <button class="navBtn" data-screen="dashboard">마이페이지</button>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- HOME: official homepage-style vertical scroll, not a dense admin tab list. -->
+      <section id="home" class="screen active">
+        <section class="product-section parchment">
+          <div class="container hero-grid">
+            <div class="hero-copy">
+              <div class="hero-badges">
+                <span class="status-chip live">Phase 1 MVP</span>
+                <span class="status-chip">공식 홈페이지 + 실시간 경기 운영</span>
+              </div>
+              <h1 class="hero-title">동호회 농구 경기 운영을 한 화면에서.</h1>
+              <p class="lead">스코어보드 조작, 디지털 기록지, 팀·선수 DB, 리그·대회 운영, 커뮤니티를 하나의 웹 기반 도구로 검증하는 단일 HTML 프로토타입입니다.</p>
+              <div class="button-row">
+                <button class="btnLarge" data-screen="control">경기 조작 시작</button>
+                <button class="btnGhost" data-screen="display">전광판 보기</button>
+                <button class="btnGhost" data-screen="community">커뮤니티 둘러보기</button>
+              </div>
+              <p class="fine">결제, 대관, 크레딧, 실제 인증, PDF 파싱, 하드웨어 제어는 MVP에서 mock 또는 Coming later로만 표시됩니다.</p>
+            </div>
+            <div class="product-object" aria-label="현재 진행 중 경기 요약">
+              <div class="mini-display">
+                <div class="mini-display-score">
+                  <div class="mini-display-team">
+                    <span data-bind="homeTeam">서울 썬더스</span>
+                    <strong data-bind="homeScore">42</strong>
+                  </div>
+                  <div class="center">
+                    <div class="mini-display-clock" data-bind="clock">06:05</div>
+                    <div class="tag dark"><span data-bind="quarter">Q2</span> · Shot <span data-bind="shotClock">18</span></div>
+                  </div>
+                  <div class="mini-display-team away">
+                    <span data-bind="awayTeam">부산 웨이브</span>
+                    <strong data-bind="awayScore">38</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="product-section" id="home-live-game">
+          <div class="container stack-lg">
+            <div class="section-header">
+              <div>
+                <span class="section-kicker">Live Game</span>
+                <h2 class="section-title">들어오자마자 경기 상황을 파악합니다.</h2>
+              </div>
+              <div class="button-row">
+                <button class="btn" data-screen="control">조작 패널</button>
+                <button class="btnGhost" data-screen="score-sheet">기록지</button>
+              </div>
+            </div>
+            <div class="live-box-score dark-live" data-live-box="home"></div>
+          </div>
+        </section>
+
+        <section class="product-section parchment" id="home-scoreboard">
+          <div class="container stack-lg">
+            <div class="section-header">
+              <div>
+                <span class="section-kicker">Scoreboard</span>
+                <h2 class="section-title">전광판 조작과 기록 입력은 빠르게.</h2>
+                <p class="lead">실제 경기장에서 기록원이 태블릿으로 누르는 상황을 기준으로, 큰 버튼과 명확한 Home/Away 구분을 우선합니다.</p>
+              </div>
+            </div>
+            <div class="three-column">
+              <button class="feature-card" data-screen="control"><span class="icon">01</span><div><h3>스코어보드 조작</h3><p>점수, 파울, 작전타임, 쿼터, 게임 클락과 샷 클락을 즉시 제어합니다.</p></div></button>
+              <button class="feature-card" data-screen="display"><span class="icon">02</span><div><h3>전광판 표시</h3><p>compact, standard, large 모드로 소형 디스플레이부터 대형 TV까지 고려합니다.</p></div></button>
+              <button class="feature-card" data-screen="score-sheet"><span class="icon">03</span><div><h3>디지털 기록지</h3><p>선수별 득점, 파울, 리바운드, 어시스트를 이벤트 로그와 함께 남깁니다.</p></div></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="product-section dark" id="home-league">
+          <div class="container two-column">
+            <div class="stack-lg">
+              <span class="section-kicker">League & Tournament</span>
+              <h2 class="section-title">리그, 대회, 대진표, 순위를 큰 흐름으로 관리합니다.</h2>
+              <p class="lead">작은 카드로 흩뿌리지 않고, 경기 운영 이후 연결되는 리그·대회 운영 흐름을 하나의 영역으로 묶었습니다.</p>
+              <div class="button-row">
+                <button class="btn" data-screen="leagues">리그 보기</button>
+                <button class="btnGhost" data-screen="tournaments">대회 보기</button>
+              </div>
+            </div>
+            <div class="utility-card stack">
+              <div class="split-row"><strong>2026 서울 오픈 베타 리그</strong><span class="tag live">진행 중</span></div>
+              <div class="table-wrap"><table><tbody><tr><td>1</td><td>서울 썬더스</td><td>5승 1패</td></tr><tr><td>2</td><td>부산 웨이브</td><td>4승 2패</td></tr><tr><td>3</td><td>인천 팔콘스</td><td>3승 3패</td></tr></tbody></table></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="product-section" id="home-teams">
+          <div class="container stack-lg">
+            <div class="section-header">
+              <div>
+                <span class="section-kicker">Teams & Players</span>
+                <h2 class="section-title">팀과 선수 정보는 운영자 도구처럼 정돈합니다.</h2>
+              </div>
+              <div class="button-row"><button class="btn" data-screen="teams">팀 정보</button><button class="btnGhost" data-screen="players">선수 정보</button></div>
+            </div>
+            <div class="four-column">
+              <button class="feature-card" data-screen="teams"><span class="icon">팀</span><div><h3>팀 정보</h3><p>지역, 수준, 활동 요일, 모집 상태, 민감 연락처 마스킹.</p></div></button>
+              <button class="feature-card" data-screen="players"><span class="icon">선</span><div><h3>선수 정보</h3><p>등번호, 포지션, 평균 득점, 신장, 개인정보 보호.</p></div></button>
+              <button class="feature-card" data-screen="intranet"><span class="icon">인</span><div><h3>팀 인트라넷</h3><p>명부, 출석, 투표, 장비 조사 mock 흐름.</p></div></button>
+              <button class="feature-card" data-screen="result"><span class="icon">결</span><div><h3>경기 결과</h3><p>최종 점수, 쿼터별 점수, 선수 박스 스코어.</p></div></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="product-section parchment" id="home-community">
+          <div class="container stack-lg">
+            <div class="section-header">
+              <div>
+                <span class="section-kicker">Community</span>
+                <h2 class="section-title">동호회가 익숙한 카페형 게시판.</h2>
+                <p class="lead">카드형 SNS보다 번호, 카테고리, 제목, 댓글, 작성자, 조회수 중심의 긴 리스트를 우선합니다.</p>
+              </div>
+              <div class="button-row"><button class="btn" data-screen="community">게시판 열기</button><button class="btnGhost" data-screen="pickup">픽업/게스트</button></div>
+            </div>
+            <div class="community-board" data-board-preview="home"></div>
+          </div>
+        </section>
+
+        <section class="product-section" id="home-support">
+          <div class="container stack-lg">
+            <div class="section-header">
+              <div>
+                <span class="section-kicker">Support</span>
+                <h2 class="section-title">공지, 사용법, FAQ, Q&A를 한곳에서.</h2>
+              </div>
+            </div>
+            <div class="four-column">
+              <button class="feature-card" data-screen="support" data-tab-target="supportNotice"><span class="icon">공</span><div><h3>공지사항</h3><p>점검, 업데이트, 대회 규정 변경 공지.</p></div></button>
+              <button class="feature-card" data-screen="support" data-tab-target="supportManual"><span class="icon">법</span><div><h3>사용법</h3><p>전광판 연결과 기록지 입력 매뉴얼.</p></div></button>
+              <button class="feature-card" data-screen="support" data-tab-target="supportFaq"><span class="icon">?</span><div><h3>FAQ</h3><p>무료 사용, TV 연결, 권한, 개인정보 보호.</p></div></button>
+              <button class="feature-card" data-screen="support" data-tab-target="supportQna"><span class="icon">Q</span><div><h3>Q&A</h3><p>1:1 문의와 관리자 답변 상태 mock.</p></div></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="product-section dark" id="home-all-features">
+          <div class="container stack-lg">
+            <div class="section-header">
+              <div><span class="section-kicker">Feature Map</span><h2 class="section-title">홈의 모든 주요 기능은 클릭 가능합니다.</h2></div>
+            </div>
+            <div class="four-column">
+              <button class="feature-card" data-screen="control"><span class="icon">조</span><div><h3>스코어보드 조작</h3><p>Live control panel</p></div></button>
+              <button class="feature-card" data-screen="display"><span class="icon">전</span><div><h3>전광판 표시</h3><p>Public display</p></div></button>
+              <button class="feature-card" data-screen="score-sheet"><span class="icon">기</span><div><h3>디지털 기록지</h3><p>Score sheet</p></div></button>
+              <button class="feature-card" data-screen="result"><span class="icon">결</span><div><h3>경기 결과</h3><p>Box score</p></div></button>
+              <button class="feature-card" data-screen="teams"><span class="icon">팀</span><div><h3>팀 정보</h3><p>Team CRUD</p></div></button>
+              <button class="feature-card" data-screen="players"><span class="icon">선</span><div><h3>선수 정보</h3><p>Player DB</p></div></button>
+              <button class="feature-card" data-screen="leagues"><span class="icon">리</span><div><h3>리그 정보</h3><p>Standings</p></div></button>
+              <button class="feature-card" data-screen="tournaments"><span class="icon">대</span><div><h3>대회 정보</h3><p>Bracket</p></div></button>
+              <button class="feature-card" data-screen="pickup"><span class="icon">픽</span><div><h3>픽업/게스트 신청</h3><p>Matching</p></div></button>
+              <button class="feature-card" data-screen="intranet"><span class="icon">인</span><div><h3>팀 인트라넷</h3><p>Roster/Vote</p></div></button>
+              <button class="feature-card" data-screen="community"><span class="icon">커</span><div><h3>커뮤니티</h3><p>Board</p></div></button>
+              <button class="feature-card" data-screen="support"><span class="icon">지</span><div><h3>공지/사용법/FAQ/Q&A</h3><p>Support</p></div></button>
+              <button class="feature-card" data-screen="dashboard"><span class="icon">마</span><div><h3>마이페이지</h3><p>Dashboard</p></div></button>
+              <button class="feature-card phase2-stub" data-disabled="true" data-screen="wallet"><span class="icon">2</span><div><h3>결제·크레딧</h3><p>Coming later</p></div></button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- CONTROL PANEL -->
+      <section id="control" class="screen screen-pad">
+        <div class="container stack-lg top-live-wrap">
+          <div class="live-box-score dark-live" data-live-box="control"></div>
+
+          <div class="section-header">
+            <div>
+              <span class="section-kicker">Scoreboard Control Panel</span>
+              <h2 class="section-title">경기 조작 패널</h2>
+              <p class="lead">경기장에서 자주 누르는 조작은 한두 번의 탭으로 끝나도록 크게 배치했습니다.</p>
+            </div>
+            <div class="button-row">
+              <button class="btnMini" data-action="undoLast">최근 이벤트 되돌리기</button>
+              <button class="btnMini" data-action="resetDemo">데모 초기화</button>
+              <span class="tag live" id="syncStatus">● 로컬 저장 대기</span>
+            </div>
+          </div>
+
+          <div class="control-grid">
+            <article class="panel control-team-panel">
+              <div class="split-row"><div><span class="team-label">HOME</span><h3 data-bind="homeTeam">서울 썬더스</h3></div><strong class="score-number" data-bind="homeScore">42</strong></div>
+              <div class="score-control-grid">
+                <button class="btnScore" data-action="scoreTeam" data-side="home" data-points="1">+1</button>
+                <button class="btnScore" data-action="scoreTeam" data-side="home" data-points="2">+2</button>
+                <button class="btnScore" data-action="scoreTeam" data-side="home" data-points="3">+3</button>
+              </div>
+              <div class="aux-control-grid">
+                <button class="btnMini" data-action="scoreTeam" data-side="home" data-points="-1">점수 -1</button>
+                <button class="btnMini" data-action="teamFoul" data-side="home" data-delta="1">팀 파울 +</button>
+                <button class="btnMini" data-action="teamFoul" data-side="home" data-delta="-1">팀 파울 -</button>
+                <button class="btnMini" data-action="timeout" data-side="home" data-delta="-1">작전타임 사용</button>
+                <button class="btnMini" data-action="timeout" data-side="home" data-delta="1">작전타임 복구</button>
+              </div>
+              <div class="lineup-strip"><div class="lineup-title">현재 코트 라인업</div><div class="lineup-list" data-roster="home-oncourt"></div></div>
+            </article>
+
+            <article class="panel timer-panel">
+              <div class="timer-face">
+                <div class="game-quarter" data-bind="quarter">Q2</div>
+                <div class="game-clock" data-bind="clock">06:05</div>
+                <div class="shot-clock-tile"><span class="shot-label">Shot Clock</span><strong class="shot-number" data-bind="shotClock">18</strong></div>
+                <div class="possession-row"><span class="tag dark">공격권 <span data-bind="possessionLabel">HOME</span></span><span class="tag dark">상태 <span data-bind="status">일시정지</span></span></div>
+              </div>
+              <div class="timer-button-grid three">
+                <button class="btnSuccess" data-action="clockStart">게임 클락 시작</button>
+                <button class="btnWarn" data-action="clockStop">게임 클락 정지</button>
+                <button class="btnMini" data-action="clockReset" data-seconds="600">게임 클락 리셋</button>
+              </div>
+              <div class="timer-button-grid three">
+                <button class="btnMini" data-action="shotClockReset" data-seconds="24">샷 클락 24초</button>
+                <button class="btnMini" data-action="shotClockReset" data-seconds="14">샷 클락 14초</button>
+                <button class="btnMini" data-action="shotClockStop">샷 클락 정지</button>
+              </div>
+              <div class="timer-button-grid">
+                <button class="btnMini" data-action="clockAdjust" data-seconds="60">+1분</button>
+                <button class="btnMini" data-action="clockAdjust" data-seconds="-60">-1분</button>
+                <button class="btnMini" data-action="quarterDown">이전 쿼터</button>
+                <button class="btnMini" data-action="quarterUp">다음 쿼터</button>
+                <button class="btnMini" data-action="possessionToggle">포제션 변경</button>
+                <button class="btnDanger" data-action="endGame">경기 종료</button>
+              </div>
+              <p class="caption">샷 클락과 팀 파울 페널티는 FIBA 방식에 가까운 기본값으로 표시합니다. 실제 리그별 규정은 Vue/FastAPI 구현 시 GameRule 설정으로 분리합니다.</p>
+            </article>
+
+            <article class="panel control-team-panel">
+              <div class="split-row"><strong class="score-number" data-bind="awayScore">38</strong><div class="center"><span class="team-label">AWAY</span><h3 data-bind="awayTeam">부산 웨이브</h3></div></div>
+              <div class="score-control-grid">
+                <button class="btnScore" data-action="scoreTeam" data-side="away" data-points="1">+1</button>
+                <button class="btnScore" data-action="scoreTeam" data-side="away" data-points="2">+2</button>
+                <button class="btnScore" data-action="scoreTeam" data-side="away" data-points="3">+3</button>
+              </div>
+              <div class="aux-control-grid">
+                <button class="btnMini" data-action="scoreTeam" data-side="away" data-points="-1">점수 -1</button>
+                <button class="btnMini" data-action="teamFoul" data-side="away" data-delta="1">팀 파울 +</button>
+                <button class="btnMini" data-action="teamFoul" data-side="away" data-delta="-1">팀 파울 -</button>
+                <button class="btnMini" data-action="timeout" data-side="away" data-delta="-1">작전타임 사용</button>
+                <button class="btnMini" data-action="timeout" data-side="away" data-delta="1">작전타임 복구</button>
+              </div>
+              <div class="lineup-strip"><div class="lineup-title">현재 코트 라인업</div><div class="lineup-list" data-roster="away-oncourt"></div></div>
+            </article>
+          </div>
+
+          <div class="two-column">
+            <article class="panel stack">
+              <div class="split-row"><h3>주요 선수 빠른 기록</h3><button class="btnMini" data-screen="score-sheet">전체 기록지로 이동</button></div>
+              <div class="roster-grid"><div><h4 data-bind="homeTeam">서울 썬더스</h4><div class="roster-list" data-roster="home-quick"></div></div><div><h4 data-bind="awayTeam">부산 웨이브</h4><div class="roster-list" data-roster="away-quick"></div></div></div>
+            </article>
+            <article class="panel stack">
+              <div class="split-row"><h3>최근 이벤트 로그</h3><span class="tag"><span data-bind="eventCount">0</span> events</span></div>
+              <div class="event-log" data-event-list="control"></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- PUBLIC DISPLAY -->
+      <section id="display" class="screen">
+        <div class="display-toolbar">
+          <div><strong>Public Scoreboard Display</strong><div class="caption">소형 전광판 · 태블릿/노트북 · 대형 TV/빔프로젝터를 모두 고려한 표시 모드</div></div>
+          <div class="button-row">
+            <button class="btnMini" data-action="displayMode" data-mode="compact">compact</button>
+            <button class="btnMini" data-action="displayMode" data-mode="standard">standard</button>
+            <button class="btnMini" data-action="displayMode" data-mode="large">large</button>
+            <button class="btn" data-screen="control">조작 패널로</button>
+          </div>
+        </div>
+        <div class="display-stage">
+          <div id="scoreboardDisplay" class="scoreboard-display standard">
+            <div class="display-top"><span data-bind="venue">상암 시민체육관 · Court A</span><span data-bind="status">일시정지</span><span>MODE <strong data-bind="displayMode">STANDARD</strong></span></div>
+            <div class="display-main">
+              <section class="display-team home"><div class="display-team-name" data-bind="homeTeam">서울 썬더스</div><div class="display-score" data-bind="homeScore">42</div><div class="display-metrics"><div class="display-metric"><span>Fouls</span><strong data-bind="homeFouls">4</strong></div><div class="display-metric"><span>Timeout</span><strong data-bind="homeTimeouts">2</strong></div><div class="display-metric"><span>Bonus</span><strong data-bind="homeBonus">-</strong></div><div class="display-metric"><span>Poss</span><strong data-bind="homePossessionMark">▶</strong></div></div></section>
+              <section class="display-center"><div class="game-quarter" data-bind="quarter">Q2</div><div class="display-clock" data-bind="clock">06:05</div><div class="display-shot"><span class="shot-label">SHOT</span><strong data-bind="shotClock">18</strong></div><div class="tag dark">최근 득점 <span data-bind="lastScorer">#3 정민재 2점</span></div></section>
+              <section class="display-team away"><div class="display-team-name" data-bind="awayTeam">부산 웨이브</div><div class="display-score" data-bind="awayScore">38</div><div class="display-metrics"><div class="display-metric"><span>Fouls</span><strong data-bind="awayFouls">5</strong></div><div class="display-metric"><span>Timeout</span><strong data-bind="awayTimeouts">1</strong></div><div class="display-metric"><span>Bonus</span><strong data-bind="awayBonus">BONUS</strong></div><div class="display-metric"><span>Poss</span><strong data-bind="awayPossessionMark">-</strong></div></div></section>
+            </div>
+            <div class="display-bottom">
+              <div class="display-info-panel"><strong>HOME LINEUP</strong><div class="display-lineup" data-roster="home-display-lineup"></div></div>
+              <div class="display-info-panel"><strong>AWAY LINEUP</strong><div class="display-lineup" data-roster="away-display-lineup"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DIGITAL SCORE SHEET -->
+      <section id="score-sheet" class="screen screen-pad">
+        <div class="container stack-lg top-live-wrap">
+          <div class="live-box-score dark-live" data-live-box="record"></div>
+          <div class="section-header"><div><span class="section-kicker">Digital Score Sheet</span><h2 class="section-title">디지털 기록지</h2><p class="lead">각 팀 12명 엔트리와 현재 코트 위 5명을 구분하고, 스타팅 멤버 배지를 표시합니다.</p></div></div>
+          <div class="roster-grid">
+            <article class="panel stack"><div class="split-row"><h3 data-bind="homeTeam">서울 썬더스</h3><span class="tag live">HOME</span></div><div class="section-tabs" data-tab-group="homeRosterTabs"><button class="tabBtn active" data-tab="homeOnCourtPanel">코트 5명</button><button class="tabBtn" data-tab="homeBenchPanel">벤치 7명</button><button class="tabBtn" data-tab="homeAllPanel">전체 12명</button></div><div id="homeOnCourtPanel" class="tabPanel active"><div class="roster-list" data-roster="home-record-oncourt"></div></div><div id="homeBenchPanel" class="tabPanel"><div class="roster-list" data-roster="home-record-bench"></div></div><div id="homeAllPanel" class="tabPanel"><div class="roster-list" data-roster="home-record-all"></div></div></article>
+            <article class="panel stack"><div class="split-row"><h3 data-bind="awayTeam">부산 웨이브</h3><span class="tag live">AWAY</span></div><div class="section-tabs" data-tab-group="awayRosterTabs"><button class="tabBtn active" data-tab="awayOnCourtPanel">코트 5명</button><button class="tabBtn" data-tab="awayBenchPanel">벤치 7명</button><button class="tabBtn" data-tab="awayAllPanel">전체 12명</button></div><div id="awayOnCourtPanel" class="tabPanel active"><div class="roster-list" data-roster="away-record-oncourt"></div></div><div id="awayBenchPanel" class="tabPanel"><div class="roster-list" data-roster="away-record-bench"></div></div><div id="awayAllPanel" class="tabPanel"><div class="roster-list" data-roster="away-record-all"></div></div></article>
+          </div>
+          <div class="two-column"><article class="panel stack"><h3>선수 박스 스코어</h3><div class="table-wrap"><table id="boxScoreTable"><thead><tr><th>팀</th><th>번호</th><th>선수</th><th>POS</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>TOV</th><th>PF</th><th>상태</th></tr></thead><tbody></tbody></table></div></article><article class="panel stack"><h3>기록 이벤트</h3><div class="event-log" data-event-list="record"></div></article></div>
+        </div>
+      </section>
+
+      <!-- RESULT -->
+      <section id="result" class="screen screen-pad">
+        <div class="container stack-lg top-live-wrap">
+          <div class="live-box-score dark-live" data-live-box="result"></div>
+          <div class="section-header"><div><span class="section-kicker">Game Result</span><h2 class="section-title">경기 결과</h2><p class="lead" id="resultSummary">현재 상태 기준 미리보기입니다.</p></div><div class="button-row"><button class="btn" data-action="finalizeResult">결과 확정 데모</button><button class="btnGhost" data-action="downloadFake" data-label="경기 결과 PDF">PDF 내보내기</button><button class="btnGhost" data-action="copyShareLink">공유 링크</button></div></div>
+          <div class="three-column"><article class="utility-card center"><span class="team-label">Winner</span><h3 id="resultWinner">동점</h3><p class="muted"><span data-bind="status">일시정지</span></p></article><article class="utility-card center"><span class="team-label" data-bind="homeTeam">서울 썬더스</span><div class="score-number" data-bind="homeScore">42</div></article><article class="utility-card center"><span class="team-label" data-bind="awayTeam">부산 웨이브</span><div class="score-number" data-bind="awayScore">38</div></article></div>
+          <div class="two-column"><article class="panel stack"><h3>쿼터별 점수</h3><div class="table-wrap"><table id="quarterTable"><thead><tr><th>팀</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>OT</th><th>Total</th></tr></thead><tbody></tbody></table></div></article><article class="panel stack"><h3>MVP / 주요 선수</h3><div id="mvpCard" class="utility-card"></div><h3>스타팅 멤버</h3><div class="roster-grid"><div><strong>HOME</strong><div class="lineup-list" data-roster="home-starters"></div></div><div><strong>AWAY</strong><div class="lineup-list" data-roster="away-starters"></div></div></div></article></div>
+          <article class="panel stack"><h3>출전 선수 박스 스코어</h3><div class="table-wrap"><table id="resultBoxTable"><thead><tr><th>팀</th><th>번호</th><th>선수</th><th>POS</th><th>PTS</th><th>REB</th><th>AST</th><th>PF</th><th>Starter</th><th>On Court</th></tr></thead><tbody></tbody></table></div></article>
+        </div>
+      </section>
+
+      <!-- TEAMS -->
+      <section id="teams" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Teams</span><h2 class="section-title">팀 정보</h2><p class="lead">공식 서비스의 운영자 도구처럼 검색, 필터, 민감 연락처 마스킹을 제공합니다.</p></div><button class="btn" data-action="mockCreate" data-entity="팀">팀 등록</button></div><div class="toolbar"><div class="filters"><input id="teamSearch" class="input" placeholder="팀명, 지역, 감독 검색" /><select id="teamRegion" class="select"><option value="">전체 지역</option><option>서울</option><option>부산</option><option>인천</option><option>대전</option></select></div><button class="btnGhost" data-action="downloadFake" data-label="팀 목록 PDF">PDF</button></div><div class="data-grid" id="teamList"></div></div></section>
+
+      <!-- PLAYERS -->
+      <section id="players" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Players</span><h2 class="section-title">선수 정보</h2><p class="lead">선수 명단, 포지션, 평균 기록, 민감 연락처 보호를 검증합니다.</p></div><button class="btn" data-action="mockCreate" data-entity="선수">선수 등록</button></div><div class="toolbar"><div class="filters"><input id="playerSearch" class="input" placeholder="선수명, 팀, 포지션 검색" /><select id="playerPosition" class="select"><option value="">전체 포지션</option><option>PG</option><option>SG</option><option>SF</option><option>PF</option><option>C</option></select></div><button class="btnGhost" data-action="downloadFake" data-label="선수 목록 PDF">PDF</button></div><div class="table-wrap"><table id="playerTable"><thead><tr><th>번호</th><th>이름</th><th>포지션</th><th>팀</th><th>신장</th><th>평균 득점</th><th>연락처</th><th>관리</th></tr></thead><tbody></tbody></table></div></div></section>
+
+      <!-- LEAGUES -->
+      <section id="leagues" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Leagues</span><h2 class="section-title">리그 정보</h2><p class="lead">진행 중 리그, 순위표, 일정, 결과 입력 진입점을 큰 섹션으로 묶었습니다.</p></div><button class="btn" data-action="mockCreate" data-entity="리그">리그 생성</button></div><div class="two-column"><article class="panel stack"><h3>2026 서울 오픈 베타 리그</h3><div class="table-wrap"><table><thead><tr><th>순위</th><th>팀</th><th>승</th><th>패</th><th>득실</th></tr></thead><tbody><tr><td>1</td><td>서울 썬더스</td><td>5</td><td>1</td><td>+74</td></tr><tr><td>2</td><td>부산 웨이브</td><td>4</td><td>2</td><td>+31</td></tr><tr><td>3</td><td>인천 팔콘스</td><td>3</td><td>3</td><td>-4</td></tr></tbody></table></div></article><article class="panel stack"><h3>다가오는 경기</h3><div class="event-log"><div class="event-item"><div class="event-time">5/12</div><div><strong>인천 팔콘스 vs 대전 코멧츠</strong><br><span class="muted">상암 시민체육관 Court B</span></div></div><div class="event-item"><div class="event-time">5/14</div><div><strong>서울 썬더스 vs 부산 웨이브</strong><br><span class="muted">Open beta round 7</span></div></div></div></article></div></div></section>
+
+      <!-- TOURNAMENTS -->
+      <section id="tournaments" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Tournaments</span><h2 class="section-title">대회 정보</h2><p class="lead">대회 참가 조건, 대진표, 신청 상태, PDF 규정집을 MVP 수준 mock으로 표현합니다.</p></div><button class="btn" data-action="mockApplyTournament">대회 신청</button></div><div class="three-column"><article class="utility-card stack"><span class="tag live">모집 중</span><h3>마포 3x3 챌린지</h3><p class="muted">모집 16팀 · 참가비 Phase 2 결제 미구현 · 규정집 PDF mock</p><button class="btnMini" data-action="mockApplyTournament">참가 신청</button></article><article class="utility-card stack"><span class="tag">대진표</span><h3>서울 오픈 토너먼트</h3><p class="muted">8강 브라켓 · 결과 입력 대기</p><button class="btnMini" data-action="downloadFake" data-label="대진표 PDF">PDF</button></article><article class="utility-card stack"><span class="tag warn">Coming later</span><h3>참가비 결제</h3><p class="muted">Phase 2 PG/크레딧 영역이므로 비활성 스텁입니다.</p><button class="btnMini" data-disabled="true">비활성</button></article></div></div></section>
+
+      <!-- PICKUP -->
+      <section id="pickup" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Pickup / Guest Application</span><h2 class="section-title">픽업게임 · 게스트 신청</h2><p class="lead">지역, 포지션, 수준, 일정 조건을 중심으로 실제 동호회 매칭 흐름을 보여줍니다.</p></div><button class="btn" data-action="mockApplyPickup">모집 글 작성</button></div><div class="three-column"><article class="utility-card stack"><span class="tag live">오늘 20:00</span><h3>홍대 야간 픽업 2명 모집</h3><p class="muted">SG/PF 우대 · 중급 · 참가비 결제는 Phase 2</p><button class="btnMini" data-action="mockApplyPickup">신청하기</button></article><article class="utility-card stack"><span class="tag">게스트</span><h3>서울 썬더스 연습 경기</h3><p class="muted">센터 1명 · 팀장 승인 후 임시 로스터 등록</p><button class="btnMini" data-action="mockApplyPickup">게스트 신청</button></article><article class="utility-card stack"><span class="tag">구인</span><h3>기록원 / 심판 모집</h3><p class="muted">소규모 대회 기록원 2명 · 수당 mock</p><button class="btnMini" data-action="mockApplyPickup">지원하기</button></article></div></div></section>
+
+      <!-- INTRANET -->
+      <section id="intranet" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Team Intranet</span><h2 class="section-title">팀 인트라넷</h2><p class="lead">명부, 출석, 투표, 장비 조사를 MVP 범위에서 mock으로 검증합니다.</p></div><button class="btnGhost" data-action="downloadFake" data-label="팀 명부 PDF">명부 PDF</button></div><div class="two-column"><article class="panel stack"><h3>팀 표준 명부</h3><div class="table-wrap"><table><thead><tr><th>번호</th><th>이름</th><th>포지션</th><th>연락처</th><th>상태</th></tr></thead><tbody><tr><td>7</td><td>김도윤</td><td>PG</td><td><span class="masked">010-1234-7788</span></td><td>활동</td></tr><tr><td>12</td><td>박준서</td><td>SF</td><td><span class="masked">010-7721-3341</span></td><td>활동</td></tr><tr><td>33</td><td>이현우</td><td>C</td><td><span class="masked">010-8891-2231</span></td><td>부상</td></tr></tbody></table></div></article><article class="panel stack"><h3>출석 · 투표</h3><div class="event-log"><div class="event-item"><div class="event-time">투표</div><div><strong>목요일 야간 훈련 참석</strong><br><span class="muted">참석 9 · 불참 2 · 미응답 3</span><div class="button-row"><button class="btnMini" data-action="mockVote">참석</button><button class="btnMini" data-action="mockVote">불참</button></div></div></div><div class="event-item"><div class="event-time">조사</div><div><strong>하계 유니폼 사이즈</strong><br><span class="muted">PDF/Excel 내보내기 후보</span></div></div></div></article></div></div></section>
+
+      <!-- COMMUNITY -->
+      <section id="community" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Community Board</span><h2 class="section-title">카페형 커뮤니티 게시판</h2><p class="lead">번호, 카테고리, 제목, 댓글, 작성자, 작성일, 조회수, 추천 수를 가로 리스트로 보여줍니다.</p></div><button class="btn" data-action="mockCreate" data-entity="게시글">글쓰기</button></div><div class="toolbar"><div class="filters"><input id="postSearch" class="input" placeholder="게시글 검색" /><select id="postSort" class="select"><option value="latest">최신순</option><option value="views">조회순</option><option value="likes">추천순</option></select></div></div><div class="community-board"><div class="board-tabs" id="boardTabs"></div><div class="board-list" id="communityBoard"></div></div></div></section>
+
+      <!-- SUPPORT -->
+      <section id="support" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Support</span><h2 class="section-title">공지사항 · 사용법 · FAQ · Q&A</h2><p class="lead">세부 기능은 서브탭과 아코디언으로 묶어 공식 홈페이지처럼 정리했습니다.</p></div></div><div class="section-tabs" data-tab-group="supportTabs"><button class="tabBtn active" data-tab="supportNotice">공지사항</button><button class="tabBtn" data-tab="supportManual">사용법</button><button class="tabBtn" data-tab="supportFaq">FAQ</button><button class="tabBtn" data-tab="supportQna">Q&A</button></div><div id="supportNotice" class="tabPanel active"><div class="panel stack"><h3>공지사항</h3><div class="event-log"><div class="event-item"><div class="event-time">공지</div><div><strong>오픈 베타 스코어보드 테스트 안내</strong><br><span class="muted">현장 피드백 수집 중입니다.</span></div></div><div class="event-item"><div class="event-time">점검</div><div><strong>데모 데이터 초기화 주의</strong><br><span class="muted">localStorage 기반이므로 브라우저별로 다르게 저장됩니다.</span></div></div></div></div></div><div id="supportManual" class="tabPanel"><div class="panel stack"><h3>사용법</h3><ol><li>조작 패널에서 경기 시작을 누릅니다.</li><li>점수 버튼 또는 기록지 선수 버튼으로 이벤트를 입력합니다.</li><li>전광판 표시 화면을 별도 디스플레이에 띄웁니다.</li><li>경기 종료 후 결과 화면에서 박스 스코어를 확인합니다.</li></ol></div></div><div id="supportFaq" class="tabPanel"><div class="panel stack"><h3>FAQ</h3><div class="event-log"><button class="event-item" data-action="toggleFaq"><div class="event-time">Q</div><div><strong>무료로 사용할 수 있나요?</strong><br><span class="muted">Phase 1 MVP는 무료 오픈 베타 전제로 설계합니다.</span></div></button><button class="event-item" data-action="toggleFaq"><div class="event-time">Q</div><div><strong>TV가 꼭 75인치여야 하나요?</strong><br><span class="muted">아니요. 이번 버전은 compact/standard/large 표시 모드를 고려합니다.</span></div></button><button class="event-item" data-action="toggleFaq"><div class="event-time">Q</div><div><strong>결제와 크레딧은 구현됐나요?</strong><br><span class="muted">아니요. Phase 2 Coming later 스텁입니다.</span></div></button></div></div></div><div id="supportQna" class="tabPanel"><div class="panel stack"><h3>Q&A / 1:1 문의</h3><div class="table-wrap"><table><thead><tr><th>번호</th><th>제목</th><th>상태</th><th>작성일</th></tr></thead><tbody><tr><td>12</td><td>전광판을 태블릿으로 띄울 수 있나요?</td><td><span class="tag live">답변 완료</span></td><td>2026-05-07</td></tr><tr><td>11</td><td>팀 명부 연락처 권한 문의</td><td><span class="tag">접수</span></td><td>2026-05-06</td></tr></tbody></table></div><button class="btn" data-action="mockCreate" data-entity="문의">문의 작성</button></div></div></div></section>
+
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">My Page / Dashboard</span><h2 class="section-title">마이페이지</h2><p class="lead">내 팀, 신청, 게시글, 알림, 권한 상태를 한눈에 확인합니다.</p></div></div><div class="four-column"><article class="utility-card"><strong>내 팀</strong><p class="muted">서울 썬더스 · 팀 관리자</p></article><article class="utility-card"><strong>게스트 신청</strong><p class="muted">2건 심사 중</p></article><article class="utility-card"><strong>내 게시글</strong><p class="muted">12개 · 댓글 38개</p></article><article class="utility-card phase2-stub"><strong>포인트/크레딧</strong><p class="muted">Phase 2 Coming later</p></article></div></div></section>
+
+      <!-- DOCUMENTS -->
+      <section id="documents" class="screen screen-pad"><div class="container stack-lg"><div class="section-header"><div><span class="section-kicker">Documents</span><h2 class="section-title">PDF 템플릿 · 파싱 · 내보내기</h2><p class="lead">실제 PDF 파싱은 구현하지 않고, N/A와 수동 검수 흐름만 UX reference로 표시합니다.</p></div></div><div class="two-column"><article class="panel stack"><h3>표준 템플릿</h3><button class="btnMini" data-action="downloadFake" data-label="경기 기록지 템플릿">경기 기록지 템플릿</button><button class="btnMini" data-action="downloadFake" data-label="팀 명부 템플릿">팀 명부 템플릿</button><button class="btnMini" data-action="downloadFake" data-label="대회 결과 템플릿">대회 결과 템플릿</button></article><article class="panel stack"><h3>파싱 결과 미리보기</h3><div class="table-wrap"><table><tbody id="parsePreviewBody"><tr><td>장소</td><td>상암 시민체육관</td></tr><tr><td>참가비</td><td>N/A · 수동 검수 필요</td></tr></tbody></table></div><button class="btn" data-action="mockParsePdf">PDF 파싱 mock</button><button class="btnGhost" data-action="mockReviewConfirm">검수 완료 mock</button></article></div></div></section>
+    </main>
+  </div>
+
+  <div id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1d1d1f;color:#fff;border-radius:999px;padding:12px 18px;z-index:99;opacity:0;transition:opacity 160ms ease, transform 160ms ease;pointer-events:none;font-size:14px;">완료</div>
+
+  <script>
+    /*
+      Future implementation map:
+      - This object is a local prototype substitute for FastAPI GameState + MongoDB GameEvent logs.
+      - Each state-changing action should become POST /api/games/{gameId}/events with server-side RBAC, validation, audit logs, and deterministic aggregation.
+      - The scoreboard display should subscribe to WebSocket/SSE updates instead of reading local variables.
+      - Hardware integration is intentionally not implemented; future RS-485/RF adapters should live behind a scoreboard_adapter or hardware_packet service.
+    */
+
+    const STORAGE_KEY = "basketball-platform-prototype-state-v3-ia";
+    const LEGACY_KEY = "basketball-platform-prototype-state-v1";
+    const FOUL_LIMIT = 5; // FIBA-like default; future GameRule API should make this configurable per league/amateur rule set.
+
+    const defaultHomePlayers = [
+      { id: "h7", no: 7, name: "김도윤", pos: "PG", points: 12, reb: 2, ast: 5, stl: 1, blk: 0, tov: 1, fouls: 1, onCourt: true, starter: true },
+      { id: "h12", no: 12, name: "박준서", pos: "SF", points: 8, reb: 4, ast: 2, stl: 1, blk: 0, tov: 1, fouls: 2, onCourt: true, starter: true },
+      { id: "h33", no: 33, name: "이현우", pos: "C", points: 6, reb: 7, ast: 1, stl: 0, blk: 2, tov: 1, fouls: 1, onCourt: true, starter: true },
+      { id: "h24", no: 24, name: "최민석", pos: "SG", points: 5, reb: 1, ast: 3, stl: 2, blk: 0, tov: 0, fouls: 0, onCourt: true, starter: true },
+      { id: "h4", no: 4, name: "한지훈", pos: "PF", points: 4, reb: 5, ast: 0, stl: 0, blk: 1, tov: 2, fouls: 0, onCourt: true, starter: true },
+      { id: "h11", no: 11, name: "유시원", pos: "SG", points: 3, reb: 1, ast: 1, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "h21", no: 21, name: "문태성", pos: "PF", points: 2, reb: 3, ast: 0, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "h30", no: 30, name: "서강준", pos: "SF", points: 2, reb: 2, ast: 1, stl: 0, blk: 0, tov: 1, fouls: 0, onCourt: false, starter: false },
+      { id: "h2", no: 2, name: "강민호", pos: "PG", points: 0, reb: 0, ast: 1, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "h15", no: 15, name: "정우진", pos: "C", points: 0, reb: 2, ast: 0, stl: 0, blk: 1, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "h18", no: 18, name: "이규빈", pos: "SF", points: 0, reb: 1, ast: 0, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "h55", no: 55, name: "장태오", pos: "PF", points: 0, reb: 1, ast: 0, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false }
+    ];
+
+    const defaultAwayPlayers = [
+      { id: "a3", no: 3, name: "정민재", pos: "SG", points: 14, reb: 2, ast: 3, stl: 1, blk: 0, tov: 1, fouls: 1, onCourt: true, starter: true },
+      { id: "a15", no: 15, name: "오태영", pos: "PF", points: 8, reb: 5, ast: 1, stl: 0, blk: 1, tov: 2, fouls: 2, onCourt: true, starter: true },
+      { id: "a22", no: 22, name: "최강민", pos: "C", points: 6, reb: 8, ast: 1, stl: 0, blk: 2, tov: 1, fouls: 1, onCourt: true, starter: true },
+      { id: "a9", no: 9, name: "배준호", pos: "PG", points: 5, reb: 1, ast: 4, stl: 2, blk: 0, tov: 1, fouls: 0, onCourt: true, starter: true },
+      { id: "a1", no: 1, name: "노시훈", pos: "SF", points: 3, reb: 4, ast: 1, stl: 0, blk: 0, tov: 0, fouls: 1, onCourt: true, starter: true },
+      { id: "a8", no: 8, name: "김태겸", pos: "SG", points: 2, reb: 1, ast: 0, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "a13", no: 13, name: "박찬율", pos: "PF", points: 0, reb: 2, ast: 1, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "a20", no: 20, name: "윤도현", pos: "C", points: 0, reb: 3, ast: 0, stl: 0, blk: 1, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "a5", no: 5, name: "임재하", pos: "PG", points: 0, reb: 1, ast: 2, stl: 0, blk: 0, tov: 1, fouls: 0, onCourt: false, starter: false },
+      { id: "a31", no: 31, name: "송현준", pos: "SF", points: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "a44", no: 44, name: "권유찬", pos: "PF", points: 0, reb: 1, ast: 0, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false },
+      { id: "a77", no: 77, name: "차민규", pos: "C", points: 0, reb: 2, ast: 0, stl: 0, blk: 0, tov: 0, fouls: 0, onCourt: false, starter: false }
+    ];
+
+    const defaultState = {
+      gameId: "game_demo_001",
+      homeTeam: "서울 썬더스",
+      awayTeam: "부산 웨이브",
+      venue: "상암 시민체육관 · Court A",
+      status: "paused",
+      quarter: 2,
+      clockSeconds: 365,
+      shotClockSeconds: 18,
+      running: false,
+      shotClockRunning: false,
+      homeScore: 42,
+      awayScore: 38,
+      homeFouls: 4,
+      awayFouls: 5,
+      homeTimeouts: 2,
+      awayTimeouts: 1,
+      possession: "home",
+      displayMode: "standard",
+      lastScorer: "#3 정민재 2점",
+      homeQuarterScores: [24, 18, 0, 0, 0],
+      awayQuarterScores: [20, 18, 0, 0, 0],
+      homePlayers: defaultHomePlayers,
+      awayPlayers: defaultAwayPlayers,
+      eventLog: [
+        { id: "evt_seed_5", type: "player_score", message: "부산 웨이브 #3 정민재 2점", detail: "디지털 기록지 · 최근 득점", quarter: 2, clock: "06:05", createdAt: new Date().toISOString() },
+        { id: "evt_seed_4", type: "timeout", message: "서울 썬더스 작전타임 사용", detail: "남은 작전타임 2개", quarter: 2, clock: "06:42", createdAt: new Date().toISOString() },
+        { id: "evt_seed_3", type: "foul", message: "부산 웨이브 #15 오태영 개인 파울", detail: "팀 파울 5개 · 페널티 상태", quarter: 2, clock: "07:10", createdAt: new Date().toISOString() },
+        { id: "evt_seed_2", type: "player_score", message: "서울 썬더스 #7 김도윤 3점", detail: "선수 기록지 · 팀 점수 자동 합산", quarter: 2, clock: "07:41", createdAt: new Date().toISOString() },
+        { id: "evt_seed_1", type: "timer", message: "2쿼터 시작", detail: "게임 클락 10:00", quarter: 2, clock: "10:00", createdAt: new Date().toISOString() }
+      ],
+      finalized: false
+    };
+
+    const mockTeams = [
+      { name: "서울 썬더스", region: "서울", level: "중급", day: "토요일", manager: "김도윤", contact: "010-1234-7788", recruiting: true, awards: "2025 마포 리그 우승" },
+      { name: "부산 웨이브", region: "부산", level: "상급", day: "일요일", manager: "정민재", contact: "010-4456-1112", recruiting: false, awards: "2025 해운대 컵 준우승" },
+      { name: "인천 팔콘스", region: "인천", level: "초중급", day: "수요일", manager: "박시우", contact: "010-9912-8821", recruiting: true, awards: "신규 팀" },
+      { name: "대전 코멧츠", region: "대전", level: "중급", day: "금요일", manager: "한지훈", contact: "010-2221-3420", recruiting: true, awards: "2024 지역 리그 4강" }
+    ];
+
+    const communityCategories = ["전체", "자유게시판", "경기 후기", "픽업게임", "게스트 모집", "심판/기록원 모집", "공지"];
+    const communityPosts = [
+      { no: 101, pinned: true, category: "공지", title: "오픈 베타 기간 스코어보드 사용 피드백을 받습니다", comments: 12, author: "운영자", date: "2026-05-08", views: 1832, likes: 42 },
+      { no: 100, pinned: true, category: "공지", title: "전광판 표시 모드 compact / standard / large 테스트 안내", comments: 5, author: "운영자", date: "2026-05-07", views: 904, likes: 21 },
+      { no: 99, pinned: false, category: "경기 후기", title: "어제 상암 Court A 경기 기록지 써보신 분 후기 있나요?", comments: 18, author: "도윤", date: "2026-05-08", views: 312, likes: 9 },
+      { no: 98, pinned: false, category: "픽업게임", title: "오늘 20시 홍대 픽업 2명 구합니다", comments: 7, author: "민재", date: "2026-05-08", views: 228, likes: 4 },
+      { no: 97, pinned: false, category: "게스트 모집", title: "일요일 센터 게스트 한 명 가능하신 분", comments: 11, author: "웨이브", date: "2026-05-07", views: 415, likes: 6 },
+      { no: 96, pinned: false, category: "심판/기록원 모집", title: "마포 3x3 챌린지 기록원 모집합니다", comments: 3, author: "대회운영", date: "2026-05-06", views: 191, likes: 8 },
+      { no: 95, pinned: false, category: "자유게시판", title: "샷 클락 없는 체육관에서도 쓰기 편한 설정 추천", comments: 14, author: "코치K", date: "2026-05-05", views: 526, likes: 17 }
+    ];
+
+    let gameState = loadState();
+    let historyStack = [];
+    let toastTimer = null;
+    let boardCategory = "전체";
+
+    function clone(value) { return JSON.parse(JSON.stringify(value)); }
+
+    function normalizeRoster(roster, defaults) {
+      if (!Array.isArray(roster) || roster.length < 12) return clone(defaults);
+      return defaults.map((fallback, index) => ({ ...fallback, ...(roster.find(player => player.id === fallback.id) || roster[index] || {}) }));
+    }
+
+    function normalizeState(raw) {
+      const state = { ...clone(defaultState), ...(raw || {}) };
+      state.homePlayers = normalizeRoster(state.homePlayers, defaultHomePlayers);
+      state.awayPlayers = normalizeRoster(state.awayPlayers, defaultAwayPlayers);
+      state.shotClockSeconds = Number.isFinite(Number(state.shotClockSeconds)) ? Number(state.shotClockSeconds) : 24;
+      state.possession = state.possession === "away" ? "away" : "home";
+      state.displayMode = ["compact", "standard", "large"].includes(state.displayMode) ? state.displayMode : "standard";
+      state.eventLog = Array.isArray(state.eventLog) ? state.eventLog : [];
+      return state;
+    }
+
+    function loadState() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_KEY);
+        if (!stored) return clone(defaultState);
+        return normalizeState(JSON.parse(stored));
+      } catch (error) {
+        console.warn("Failed to load prototype state", error);
+        return clone(defaultState);
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+      const sync = document.getElementById("syncStatus");
+      if (sync) sync.textContent = "● 저장됨 " + new Date().toLocaleTimeString("ko-KR", { hour12: false });
+    }
+
+    function pushHistory() {
+      historyStack.push(clone(gameState));
+      if (historyStack.length > 60) historyStack.shift();
+    }
+
+    function formatClock(totalSeconds) {
+      const safe = Math.max(0, Number(totalSeconds) || 0);
+      const minutes = Math.floor(safe / 60);
+      const seconds = safe % 60;
+      return String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+    }
+
+    function getStatusLabel() {
+      if (gameState.finalized) return "종료";
+      if (gameState.running) return "진행 중";
+      if (gameState.status === "paused") return "일시정지";
+      if (gameState.status === "ready") return "대기 중";
+      return "저장됨";
+    }
+
+    function getLeaderLabel() {
+      if (gameState.homeScore === gameState.awayScore) return "동점";
+      return gameState.homeScore > gameState.awayScore ? "홈 +" + (gameState.homeScore - gameState.awayScore) : "어웨이 +" + (gameState.awayScore - gameState.homeScore);
+    }
+
+    function activeQuarterIndex() { return Math.min(Math.max(gameState.quarter - 1, 0), 4); }
+    function sideName(side) { return side === "home" ? gameState.homeTeam : gameState.awayTeam; }
+    function roster(side) { return side === "home" ? gameState.homePlayers : gameState.awayPlayers; }
+    function allPlayers() { return [...gameState.homePlayers.map(p => ({ ...p, team: gameState.homeTeam, side: "home" })), ...gameState.awayPlayers.map(p => ({ ...p, team: gameState.awayTeam, side: "away" }))]; }
+
+    function createEvent(type, message, detail) {
+      gameState.eventLog.unshift({ id: "evt_" + Date.now() + "_" + Math.random().toString(16).slice(2), type, message, detail: detail || "", quarter: gameState.quarter, clock: formatClock(gameState.clockSeconds), createdAt: new Date().toISOString() });
+      if (gameState.eventLog.length > 100) gameState.eventLog.length = 100;
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      if (!toast) return;
+      toast.textContent = message;
+      toast.style.opacity = "1";
+      toast.style.transform = "translateX(-50%) translateY(0)";
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.style.opacity = "0"; toast.style.transform = "translateX(-50%) translateY(20px)"; }, 2200);
+    }
+
+    function scoreTeam(side, points, sourceLabel) {
+      const key = side === "home" ? "homeScore" : "awayScore";
+      const qKey = side === "home" ? "homeQuarterScores" : "awayQuarterScores";
+      const delta = Number(points);
+      if (!Number.isFinite(delta) || delta === 0) return;
+      if (gameState[key] + delta < 0) { showToast("점수는 음수가 될 수 없습니다."); return; }
+      pushHistory();
+      const before = gameState[key];
+      gameState[key] += delta;
+      gameState[qKey][activeQuarterIndex()] = Math.max(0, (gameState[qKey][activeQuarterIndex()] || 0) + delta);
+      createEvent("score", `${sideName(side)} ${delta > 0 ? "+" : ""}${delta}점`, `${sourceLabel || "조작 패널"} · ${before} → ${gameState[key]}`);
+      saveState(); renderAll();
+    }
+
+    function findPlayer(side, playerId) { return roster(side).find(player => player.id === playerId); }
+
+    function playerAction(side, playerId, action, value) {
+      const player = findPlayer(side, playerId);
+      if (!player) { showToast("로스터에 없는 선수입니다."); return; }
+      pushHistory();
+      const teamName = sideName(side);
+      const numericValue = Number(value || 1);
+      if (action === "points") {
+        player.points += numericValue;
+        const key = side === "home" ? "homeScore" : "awayScore";
+        const qKey = side === "home" ? "homeQuarterScores" : "awayQuarterScores";
+        const before = gameState[key];
+        gameState[key] += numericValue;
+        gameState[qKey][activeQuarterIndex()] += numericValue;
+        gameState.lastScorer = `#${player.no} ${player.name} ${numericValue}점`;
+        createEvent("player_score", `${teamName} #${player.no} ${player.name} ${numericValue}점`, `선수 기록지 · 팀 점수 ${before} → ${gameState[key]}`);
+      }
+      if (action === "foul") {
+        player.fouls += 1;
+        if (side === "home") gameState.homeFouls += 1;
+        if (side === "away") gameState.awayFouls += 1;
+        createEvent("foul", `${teamName} #${player.no} ${player.name} 개인 파울`, "팀 파울 자동 합산");
+      }
+      if (["reb", "ast", "stl", "blk", "tov"].includes(action)) {
+        player[action] += 1;
+        const labelMap = { reb: "리바운드", ast: "어시스트", stl: "스틸", blk: "블록", tov: "턴오버" };
+        createEvent("stat", `${teamName} #${player.no} ${player.name} ${labelMap[action]}`, "선수 스탯 +1");
+      }
+      saveState(); renderAll();
+    }
+
+    function adjustTeamFoul(side, delta) {
+      const key = side === "home" ? "homeFouls" : "awayFouls";
+      const next = gameState[key] + Number(delta);
+      if (next < 0) { showToast("팀 파울은 음수가 될 수 없습니다."); return; }
+      pushHistory(); gameState[key] = next;
+      createEvent("team_foul", `${sideName(side)} 팀 파울 ${Number(delta) > 0 ? "+" : ""}${delta}`, `현재 ${gameState[key]}개`);
+      saveState(); renderAll();
+    }
+
+    function adjustTimeout(side, delta) {
+      const key = side === "home" ? "homeTimeouts" : "awayTimeouts";
+      const next = gameState[key] + Number(delta);
+      if (next < 0 || next > 3) { showToast("작전타임은 0~3개 범위로 제한합니다."); return; }
+      pushHistory(); gameState[key] = next;
+      createEvent("timeout", `${sideName(side)} 작전타임 ${Number(delta) < 0 ? "사용" : "복구"}`, `남은 작전타임 ${gameState[key]}개`);
+      saveState(); renderAll();
+    }
+
+    function clockStart() { if (gameState.finalized) { showToast("종료된 경기는 재개할 수 없습니다."); return; } pushHistory(); gameState.running = true; gameState.shotClockRunning = true; gameState.status = "running"; createEvent("timer", "게임 클락 시작", formatClock(gameState.clockSeconds)); saveState(); renderAll(); }
+    function clockStop() { pushHistory(); gameState.running = false; gameState.shotClockRunning = false; gameState.status = "paused"; createEvent("timer", "게임 클락 정지", formatClock(gameState.clockSeconds)); saveState(); renderAll(); }
+    function toggleRunning() { gameState.running ? clockStop() : clockStart(); }
+
+    function adjustClock(seconds) {
+      const next = gameState.clockSeconds + Number(seconds);
+      if (next < 0) { showToast("남은 시간은 음수가 될 수 없습니다."); return; }
+      pushHistory(); gameState.clockSeconds = next; createEvent("timer", `게임 클락 ${Number(seconds) > 0 ? "+" : ""}${seconds}초`, formatClock(gameState.clockSeconds)); saveState(); renderAll();
+    }
+
+    function resetClock(seconds) { pushHistory(); gameState.clockSeconds = Number(seconds); gameState.running = false; gameState.status = "paused"; createEvent("timer", "게임 클락 리셋", formatClock(gameState.clockSeconds)); saveState(); renderAll(); }
+    function resetShotClock(seconds) { pushHistory(); gameState.shotClockSeconds = Number(seconds); gameState.shotClockRunning = gameState.running; createEvent("shot_clock", `샷 클락 ${seconds}초 리셋`, "아마추어 규정별 설정 가능"); saveState(); renderAll(); }
+    function stopShotClock() { pushHistory(); gameState.shotClockRunning = false; createEvent("shot_clock", "샷 클락 정지", gameState.shotClockSeconds + "초"); saveState(); renderAll(); }
+
+    function changeQuarter(delta) {
+      const next = Math.min(5, Math.max(1, gameState.quarter + Number(delta)));
+      if (next === gameState.quarter) return;
+      pushHistory(); gameState.quarter = next; gameState.clockSeconds = next === 5 ? 300 : 600; gameState.shotClockSeconds = 24; gameState.running = false; gameState.shotClockRunning = false; gameState.status = "paused"; createEvent("quarter", `쿼터 변경: Q${next}`, `게임 클락 ${formatClock(gameState.clockSeconds)} · 샷 클락 24초`); saveState(); renderAll();
+    }
+
+    function togglePossession() { pushHistory(); gameState.possession = gameState.possession === "home" ? "away" : "home"; createEvent("possession", "포제션 변경", sideName(gameState.possession)); saveState(); renderAll(); }
+
+    function endGame() {
+      const ok = window.confirm("경기를 종료하시겠습니까? 실제 구현에서는 권한 검사와 종료 사유 기록이 필요합니다.");
+      if (!ok) return;
+      pushHistory(); gameState.running = false; gameState.shotClockRunning = false; gameState.status = "ended"; gameState.finalized = true; createEvent("final", "경기 종료", `${gameState.homeTeam} ${gameState.homeScore} - ${gameState.awayScore} ${gameState.awayTeam}`); saveState(); renderAll(); showToast("경기 결과가 데모로 확정되었습니다.");
+    }
+
+    function resetDemo() {
+      const ok = window.confirm("프로토타입 상태를 초기화하시겠습니까? localStorage 데모 상태도 초기화됩니다.");
+      if (!ok) return;
+      gameState = clone(defaultState); historyStack = []; createEvent("reset", "데모 상태 초기화", "기본 Mock 경기 상태로 복원"); saveState(); renderAll(); showToast("데모 상태를 초기화했습니다.");
+    }
+
+    function finalizeResult() { pushHistory(); gameState.finalized = true; gameState.running = false; gameState.shotClockRunning = false; gameState.status = "ended"; createEvent("final", "결과 확정 데모", `${getLeaderLabel()} · PDF 내보내기 후보`); saveState(); renderAll(); showToast("결과 확정 상태로 표시했습니다."); }
+
+    function undoLast() {
+      if (!historyStack.length) { showToast("되돌릴 이벤트가 없습니다."); return; }
+      gameState = historyStack.pop(); createEvent("undo", "최근 이벤트 되돌리기", "로컬 히스토리에서 복원"); saveState(); renderAll(); showToast("최근 상태를 되돌렸습니다.");
+    }
+
+    function setDisplayMode(mode) { if (!["compact", "standard", "large"].includes(mode)) return; pushHistory(); gameState.displayMode = mode; createEvent("display", `전광판 표시 모드: ${mode}`, "하드웨어 미확정 상태의 CSS 모드 전환"); saveState(); renderAll(); }
+
+    function setBind(name, value) { document.querySelectorAll(`[data-bind="${name}"]`).forEach(el => { el.textContent = value; }); }
+
+    function renderLiveBox(container) {
+      container.innerHTML = `
+        <article class="team-status home-side">
+          <div class="team-title-row"><div class="team-identity"><div class="team-logo">ST</div><div><div class="team-label">HOME</div><div class="team-name" data-bind="homeTeam"></div></div></div><span class="tag live" data-bind="homePossessionTag"></span></div>
+          <div class="score-number" data-bind="homeScore"></div>
+          <div class="team-metrics"><div class="metric-tile"><span class="metric-label">팀 파울</span><strong class="metric-value" data-bind="homeFouls"></strong></div><div class="metric-tile"><span class="metric-label">작전타임</span><strong class="metric-value" data-bind="homeTimeouts"></strong></div><div class="metric-tile"><span class="metric-label">페널티</span><strong class="metric-value" data-bind="homeBonus"></strong></div></div>
+          <div class="lineup-strip"><div class="lineup-title">현재 라인업</div><div class="lineup-list" data-roster="home-live-lineup"></div></div>
+        </article>
+        <section class="game-core">
+          <div class="game-quarter" data-bind="quarter"></div>
+          <div class="game-clock" data-bind="clock"></div>
+          <div class="shot-clock-tile"><span class="shot-label">Shot Clock</span><strong class="shot-number" data-bind="shotClock"></strong></div>
+          <div class="possession-row"><span class="tag dark">공격권 <span data-bind="possessionLabel"></span></span><span class="tag dark">리드 <span data-bind="leader"></span></span></div>
+          <div class="caption" data-bind="topPlayers"></div>
+          <div class="recent-events-compact" data-event-list="compact"></div>
+        </section>
+        <article class="team-status away-side">
+          <div class="team-title-row"><div class="team-identity"><div class="team-logo">BW</div><div><div class="team-label">AWAY</div><div class="team-name" data-bind="awayTeam"></div></div></div><span class="tag live" data-bind="awayPossessionTag"></span></div>
+          <div class="score-number" data-bind="awayScore"></div>
+          <div class="team-metrics"><div class="metric-tile"><span class="metric-label">팀 파울</span><strong class="metric-value" data-bind="awayFouls"></strong></div><div class="metric-tile"><span class="metric-label">작전타임</span><strong class="metric-value" data-bind="awayTimeouts"></strong></div><div class="metric-tile"><span class="metric-label">페널티</span><strong class="metric-value" data-bind="awayBonus"></strong></div></div>
+          <div class="lineup-strip"><div class="lineup-title">현재 라인업</div><div class="lineup-list" data-roster="away-live-lineup"></div></div>
+        </article>`;
+    }
+
+    function renderLiveContainers() { document.querySelectorAll("[data-live-box]").forEach(renderLiveBox); }
+
+    function bonusLabel(fouls) { return fouls >= FOUL_LIMIT ? "BONUS" : "-"; }
+    function topPlayersLabel() { return allPlayers().slice().sort((a, b) => b.points - a.points || b.reb - a.reb).slice(0, 3).map(p => `#${p.no} ${p.name} ${p.points}PTS`).join(" · "); }
+
+    function renderBindings() {
+      const clock = formatClock(gameState.clockSeconds);
+      const status = getStatusLabel();
+      const homePoss = gameState.possession === "home";
+      setBind("homeTeam", gameState.homeTeam); setBind("awayTeam", gameState.awayTeam); setBind("venue", gameState.venue);
+      setBind("homeScore", gameState.homeScore); setBind("awayScore", gameState.awayScore); setBind("quarter", "Q" + gameState.quarter); setBind("clock", clock); setBind("shotClock", String(gameState.shotClockSeconds).padStart(2, "0"));
+      setBind("homeFouls", gameState.homeFouls); setBind("awayFouls", gameState.awayFouls); setBind("homeTimeouts", gameState.homeTimeouts); setBind("awayTimeouts", gameState.awayTimeouts);
+      setBind("homeBonus", bonusLabel(gameState.homeFouls)); setBind("awayBonus", bonusLabel(gameState.awayFouls)); setBind("status", status); setBind("leader", getLeaderLabel()); setBind("eventCount", gameState.eventLog.length);
+      setBind("possessionLabel", homePoss ? "HOME" : "AWAY"); setBind("homePossessionTag", homePoss ? "공격권" : "수비"); setBind("awayPossessionTag", homePoss ? "수비" : "공격권");
+      setBind("homePossessionMark", homePoss ? "▶" : "-"); setBind("awayPossessionMark", homePoss ? "-" : "◀"); setBind("topPlayers", topPlayersLabel()); setBind("lastScorer", gameState.lastScorer || "-아직 없음-"); setBind("displayMode", gameState.displayMode.toUpperCase());
+      const board = document.getElementById("scoreboardDisplay"); if (board) board.className = "scoreboard-display " + gameState.displayMode;
+    }
+
+    function playerPill(player) { return `<span class="player-pill"><span class="jersey-dot">#${player.no}</span>${player.name}${player.starter ? " · S" : ""}</span>`; }
+    function displayLineupItem(player) { return `<span>#${player.no} ${player.name} ${player.points}P</span>`; }
+
+    function renderPlayerRow(player, side, compact) {
+      return `<div class="player-row ${player.onCourt ? "on-court" : ""}"><span class="jersey">${player.no}</span><div><strong>${player.name}</strong> ${player.starter ? `<span class="tag live">START</span>` : ""}<br><span class="muted">${player.pos} · ${player.points}PTS · ${player.reb}R · ${player.ast}A · PF ${player.fouls} · ${player.onCourt ? "코트" : "벤치"}</span></div>${compact ? "" : `<div class="player-actions"><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="points" data-value="1">+1</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="points" data-value="2">+2</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="points" data-value="3">+3</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="foul">파울</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="reb">REB</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="ast">AST</button></div>`}</div>`;
+    }
+
+    function renderRecordCard(player, side) {
+      return `<div class="record-card ${player.onCourt ? "on-court" : ""}"><div class="record-head"><div><strong>#${player.no} ${player.name}</strong> ${player.starter ? `<span class="tag live">START</span>` : ""}<br><span class="muted">${player.pos} · ${player.points}PTS · ${player.reb}R · ${player.ast}A · PF ${player.fouls}</span></div><span class="tag">${player.onCourt ? "코트" : "벤치"}</span></div><div class="player-actions"><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="points" data-value="1">+1</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="points" data-value="2">+2</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="points" data-value="3">+3</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="foul">PF</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="reb">REB</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="ast">AST</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="stl">STL</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="blk">BLK</button><button class="btnMini" data-action="playerAction" data-side="${side}" data-player-id="${player.id}" data-player-action="tov">TOV</button></div></div>`;
+    }
+
+    function renderRosters() {
+      const targets = document.querySelectorAll("[data-roster]");
+      targets.forEach(target => {
+        const key = target.dataset.roster;
+        const [side] = key.split("-");
+        const list = roster(side);
+        let html = "";
+        if (key.includes("live-lineup") || key === "home-oncourt" || key === "away-oncourt" || key.includes("starters")) html = list.filter(p => key.includes("starters") ? p.starter : p.onCourt).map(playerPill).join("");
+        else if (key.includes("display-lineup")) html = list.filter(p => p.onCourt).map(displayLineupItem).join("");
+        else if (key.includes("quick")) html = list.filter(p => p.onCourt).map(p => renderPlayerRow(p, side, false)).join("");
+        else if (key.includes("record-oncourt")) html = list.filter(p => p.onCourt).map(p => renderRecordCard(p, side)).join("");
+        else if (key.includes("record-bench")) html = list.filter(p => !p.onCourt).map(p => renderRecordCard(p, side)).join("");
+        else if (key.includes("record-all")) html = list.map(p => renderRecordCard(p, side)).join("");
+        target.innerHTML = html || `<span class="muted">표시할 선수가 없습니다.</span>`;
+      });
+    }
+
+    function renderEventLogs() {
+      const empty = `<div class="empty-state"><strong>이벤트가 없습니다</strong><br><span>점수, 파울, 선수 기록을 입력하면 여기에 표시됩니다.</span></div>`;
+      const eventHtml = gameState.eventLog.length ? gameState.eventLog.slice(0, 40).map(event => `<div class="event-item"><div class="event-time">Q${event.quarter}<br>${event.clock}</div><div><strong>${event.message}</strong><br><span class="muted">${event.detail || event.type}</span></div></div>`).join("") : empty;
+      document.querySelectorAll("[data-event-list='control'], [data-event-list='record']").forEach(el => el.innerHTML = eventHtml);
+      const compact = gameState.eventLog.slice(0, 3).map(event => `<div class="event-mini"><div class="event-mini-time">Q${event.quarter}<br>${event.clock}</div><div>${event.message}</div></div>`).join("") || `<div class="event-mini"><div class="event-mini-time">--</div><div>이벤트 대기 중</div></div>`;
+      document.querySelectorAll("[data-event-list='compact']").forEach(el => el.innerHTML = compact);
+    }
+
+    function renderBoxScores() {
+      const rows = allPlayers().map(player => `<tr><td>${player.team}</td><td>${player.no}</td><td><strong>${player.name}</strong></td><td>${player.pos}</td><td><strong>${player.points}</strong></td><td>${player.reb}</td><td>${player.ast}</td><td>${player.stl}</td><td>${player.blk}</td><td>${player.tov}</td><td>${player.fouls}</td><td>${player.onCourt ? "코트" : "벤치"}</td></tr>`).join("");
+      const box = document.querySelector("#boxScoreTable tbody"); if (box) box.innerHTML = rows;
+      const resultRows = allPlayers().map(player => `<tr><td>${player.team}</td><td>${player.no}</td><td><strong>${player.name}</strong></td><td>${player.pos}</td><td><strong>${player.points}</strong></td><td>${player.reb}</td><td>${player.ast}</td><td>${player.fouls}</td><td>${player.starter ? "YES" : "-"}</td><td>${player.onCourt ? "YES" : "-"}</td></tr>`).join("");
+      const resultBox = document.querySelector("#resultBoxTable tbody"); if (resultBox) resultBox.innerHTML = resultRows;
+    }
+
+    function renderResult() {
+      const winner = gameState.homeScore === gameState.awayScore ? "동점" : (gameState.homeScore > gameState.awayScore ? `${gameState.homeTeam} 리드/승리` : `${gameState.awayTeam} 리드/승리`);
+      const winnerEl = document.getElementById("resultWinner"); if (winnerEl) winnerEl.textContent = winner;
+      const summary = document.getElementById("resultSummary"); if (summary) summary.textContent = gameState.finalized ? "경기 결과가 확정되었습니다. PDF 내보내기와 공유 링크는 프로토타입 mock입니다." : "현재 상태 기준 미리보기입니다. 종료 또는 결과 확정 후 공식 기록으로 전환됩니다.";
+      const qBody = document.querySelector("#quarterTable tbody");
+      if (qBody) {
+        const row = (team, arr, total) => `<tr><td>${team}</td>${arr.map(v => `<td>${v}</td>`).join("")}<td><strong>${total}</strong></td></tr>`;
+        qBody.innerHTML = row(gameState.homeTeam, gameState.homeQuarterScores, gameState.homeScore) + row(gameState.awayTeam, gameState.awayQuarterScores, gameState.awayScore);
+      }
+      const mvp = allPlayers().slice().sort((a, b) => b.points - a.points || b.reb - a.reb || b.ast - a.ast)[0];
+      const mvpCard = document.getElementById("mvpCard");
+      if (mvpCard) mvpCard.innerHTML = `<div class="data-card-header"><strong>#${mvp.no} ${mvp.name}</strong><span class="tag live">MVP 후보</span></div><p class="muted">${mvp.team} · ${mvp.points}PTS · ${mvp.reb}REB · ${mvp.ast}AST · PF ${mvp.fouls}</p>`;
+    }
+
+    function renderTeams() {
+      const list = document.getElementById("teamList"); if (!list) return;
+      const query = (document.getElementById("teamSearch")?.value || "").trim().toLowerCase();
+      const region = document.getElementById("teamRegion")?.value || "";
+      const filtered = mockTeams.filter(team => (!query || [team.name, team.region, team.level, team.day, team.manager].join(" ").toLowerCase().includes(query)) && (!region || team.region === region));
+      list.innerHTML = filtered.length ? filtered.map(team => `<article class="data-card"><div class="data-card-header"><div><strong>${team.name}</strong><p class="muted">${team.region} · ${team.level} · ${team.day} 활동</p></div><span class="tag ${team.recruiting ? "live" : ""}">${team.recruiting ? "모집 중" : "모집 닫힘"}</span></div><div class="inline-list"><span class="tag">감독 ${team.manager}</span><span class="tag">연락처 <span class="masked">${team.contact}</span></span><span class="tag">${team.awards}</span></div><div class="button-row" style="margin-top:14px"><button class="btnMini" data-action="mockCreate" data-entity="팀 상세">상세</button><button class="btnMini" data-screen="intranet">인트라넷</button><button class="btnMini" data-action="downloadFake" data-label="${team.name} PDF">PDF</button></div></article>`).join("") : `<div class="empty-state">검색 결과가 없습니다.</div>`;
+    }
+
+    function renderPlayersTable() {
+      const body = document.querySelector("#playerTable tbody"); if (!body) return;
+      const query = (document.getElementById("playerSearch")?.value || "").trim().toLowerCase();
+      const position = document.getElementById("playerPosition")?.value || "";
+      const players = allPlayers().map(p => ({ ...p, height: p.pos === "C" ? 198 : p.pos === "PF" ? 190 : p.pos === "SF" ? 185 : 180, phone: p.side === "home" ? "010-1234-7788" : "010-4456-1112" }));
+      const filtered = players.filter(player => (!query || [player.name, player.pos, player.team].join(" ").toLowerCase().includes(query)) && (!position || player.pos === position));
+      body.innerHTML = filtered.map(player => `<tr><td>${player.no}</td><td><strong>${player.name}</strong></td><td>${player.pos}</td><td>${player.team}</td><td>${player.height}cm</td><td>${(player.points / Math.max(1, gameState.quarter)).toFixed(1)}</td><td><span class="masked">${player.phone}</span></td><td><button class="btnMini" data-action="mockCreate" data-entity="선수 상세">상세</button></td></tr>`).join("");
+    }
+
+    function renderCommunity(targetId, preview) {
+      const host = typeof targetId === "string" ? document.getElementById(targetId) : targetId;
+      if (!host) return;
+      const search = (document.getElementById("postSearch")?.value || "").trim().toLowerCase();
+      const sort = document.getElementById("postSort")?.value || "latest";
+      let posts = communityPosts.filter(post => (boardCategory === "전체" || post.category === boardCategory) && (!search || [post.title, post.author, post.category].join(" ").toLowerCase().includes(search)));
+      posts = posts.slice().sort((a, b) => (b.pinned - a.pinned) || (sort === "views" ? b.views - a.views : sort === "likes" ? b.likes - a.likes : b.no - a.no));
+      if (preview) posts = posts.slice(0, 5);
+      const tableRows = posts.map(post => `<tr class="board-row ${post.pinned ? "pinned" : ""}"><td>${post.pinned ? "공지" : post.no}</td><td><span class="tag ${post.pinned ? "live" : ""}">${post.category}</span></td><td><span class="board-title">${post.title} <span class="comment-count">[${post.comments}]</span></span></td><td>${post.author}</td><td>${post.date}</td><td>${post.views}</td><td>${post.likes}</td></tr>`).join("");
+      const mobileRows = posts.map(post => `<div class="mobile-post"><div><span class="tag ${post.pinned ? "live" : ""}">${post.category}</span> <span class="caption">${post.pinned ? "공지" : post.no}</span></div><strong>${post.title} <span class="comment-count">[${post.comments}]</span></strong><span class="caption">${post.author} · ${post.date} · 조회 ${post.views} · 추천 ${post.likes}</span></div>`).join("");
+      host.innerHTML = `<div class="board-list"><div class="table-wrap"><table class="community-table"><thead><tr><th>번호</th><th>카테고리</th><th>제목</th><th>작성자</th><th>작성일</th><th>조회</th><th>추천</th></tr></thead><tbody>${tableRows}</tbody></table><div class="mobile-board-list">${mobileRows}</div></div></div>`;
+      if (!preview) renderBoardTabs();
+    }
+
+    function renderBoardTabs() {
+      const tabs = document.getElementById("boardTabs"); if (!tabs) return;
+      tabs.innerHTML = communityCategories.map(category => `<button class="tabBtn ${category === boardCategory ? "active" : ""}" data-board-category="${category}">${category}</button>`).join("");
+    }
+
+    function renderAll() {
+      renderBindings();
+      renderRosters();
+      renderEventLogs();
+      renderBoxScores();
+      renderResult();
+      renderTeams();
+      renderPlayersTable();
+      renderCommunity("communityBoard", false);
+      document.querySelectorAll("[data-board-preview='home']").forEach(el => renderCommunity(el, true));
+    }
+
+    function showScreen(screenId) {
+      if (!screenId) screenId = "home";
+      const target = document.getElementById(screenId);
+      if (!target) return;
+      document.querySelectorAll(".screen").forEach(section => section.classList.toggle("active", section.id === screenId));
+      document.querySelectorAll(".navBtn[data-screen]").forEach(button => button.classList.toggle("active", button.dataset.screen === screenId));
+      document.body.classList.toggle("display-mode", screenId === "display");
+      if (location.hash !== "#" + screenId) history.replaceState(null, "", "#" + screenId);
+      window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    }
+
+    function activateTab(tabId) {
+      const panel = document.getElementById(tabId); if (!panel) return;
+      const group = panel.parentElement;
+      if (!group) return;
+      group.querySelectorAll(".tabPanel").forEach(el => el.classList.toggle("active", el.id === tabId));
+      document.querySelectorAll(`.tabBtn[data-tab="${tabId}"]`).forEach(btn => {
+        const shell = btn.closest("[data-tab-group]");
+        if (shell) shell.querySelectorAll(".tabBtn").forEach(item => item.classList.toggle("active", item === btn));
+      });
+    }
+
+    function handleMockAction(label) { showToast(label + " 기능은 프로토타입 데모입니다."); }
+
+    document.addEventListener("click", event => {
+      const disabled = event.target.closest("[data-disabled='true']");
+      if (disabled) { showToast("Phase 2 기능은 Coming later이며 MVP에서 비활성입니다."); return; }
+
+      const boardTab = event.target.closest("[data-board-category]");
+      if (boardTab) { boardCategory = boardTab.dataset.boardCategory; renderCommunity("communityBoard", false); return; }
+
+      const screenButton = event.target.closest("[data-screen]");
+      if (screenButton) {
+        showScreen(screenButton.dataset.screen);
+        if (screenButton.dataset.tabTarget) setTimeout(() => activateTab(screenButton.dataset.tabTarget), 0);
+        return;
+      }
+
+      const tabButton = event.target.closest(".tabBtn[data-tab]");
+      if (tabButton) {
+        const shell = tabButton.closest("[data-tab-group]");
+        if (shell) shell.querySelectorAll(".tabBtn").forEach(btn => btn.classList.toggle("active", btn === tabButton));
+        const panel = document.getElementById(tabButton.dataset.tab);
+        const panelParent = panel?.parentElement;
+        if (panelParent) panelParent.querySelectorAll(".tabPanel").forEach(item => item.classList.toggle("active", item === panel));
+        return;
+      }
+
+      const actionEl = event.target.closest("[data-action]");
+      if (!actionEl) return;
+      const action = actionEl.dataset.action;
+      if (action === "toggleRunning") toggleRunning();
+      if (action === "clockStart") clockStart();
+      if (action === "clockStop") clockStop();
+      if (action === "clockAdjust") adjustClock(Number(actionEl.dataset.seconds));
+      if (action === "clockReset") resetClock(Number(actionEl.dataset.seconds));
+      if (action === "shotClockReset") resetShotClock(Number(actionEl.dataset.seconds));
+      if (action === "shotClockStop") stopShotClock();
+      if (action === "quarterUp") changeQuarter(1);
+      if (action === "quarterDown") changeQuarter(-1);
+      if (action === "possessionToggle") togglePossession();
+      if (action === "scoreTeam") scoreTeam(actionEl.dataset.side, Number(actionEl.dataset.points), "점수 버튼");
+      if (action === "teamFoul") adjustTeamFoul(actionEl.dataset.side, Number(actionEl.dataset.delta));
+      if (action === "timeout") adjustTimeout(actionEl.dataset.side, Number(actionEl.dataset.delta));
+      if (action === "playerAction") playerAction(actionEl.dataset.side, actionEl.dataset.playerId, actionEl.dataset.playerAction, actionEl.dataset.value);
+      if (action === "undoLast") undoLast();
+      if (action === "endGame") endGame();
+      if (action === "resetDemo") resetDemo();
+      if (action === "finalizeResult") finalizeResult();
+      if (action === "displayMode") setDisplayMode(actionEl.dataset.mode);
+      if (action === "downloadFake") handleMockAction(actionEl.dataset.label || "내보내기");
+      if (action === "copyShareLink") {
+        const text = location.href.split("#")[0] + "#result";
+        navigator.clipboard?.writeText(text).then(() => showToast("공유 링크를 복사했습니다."), () => showToast("공유 링크: " + text));
+      }
+      if (action === "mockCreate") handleMockAction((actionEl.dataset.entity || "항목") + " 생성/수정");
+      if (action === "mockApplyTournament") handleMockAction("대회 참가 신청");
+      if (action === "mockApplyPickup") handleMockAction("픽업/게스트 신청");
+      if (action === "mockVote") handleMockAction("투표/출석 응답");
+      if (action === "mockParsePdf") { handleMockAction("PDF 파싱"); document.querySelectorAll("#parsePreviewBody tr").forEach((row, index) => row.style.background = index % 2 ? "rgba(0,102,204,0.06)" : "transparent"); }
+      if (action === "mockReviewConfirm") handleMockAction("검수 완료 저장");
+      if (action === "toggleFaq") handleMockAction("FAQ 아코디언");
+    });
+
+    ["teamSearch", "teamRegion", "playerSearch", "playerPosition", "postSearch", "postSort"].forEach(id => {
+      document.addEventListener("input", event => { if (event.target.id === id) renderAll(); });
+      document.addEventListener("change", event => { if (event.target.id === id) renderAll(); });
+    });
+
+    window.addEventListener("hashchange", () => showScreen(location.hash.replace("#", "") || "home"));
+
+    // Prototype timer tick. Production should calculate remaining time from backend-authoritative timestamps to avoid client drift.
+    setInterval(() => {
+      if (!gameState.running || gameState.finalized) return;
+      if (gameState.clockSeconds <= 0) {
+        gameState.running = false; gameState.shotClockRunning = false; gameState.status = "paused";
+        createEvent("timer", "쿼터 시간 종료", "수동으로 다음 쿼터를 선택하세요."); saveState(); renderAll(); return;
+      }
+      gameState.clockSeconds -= 1;
+      if (gameState.shotClockRunning && gameState.shotClockSeconds > 0) gameState.shotClockSeconds -= 1;
+      if (gameState.shotClockSeconds <= 0 && gameState.shotClockRunning) { gameState.shotClockRunning = false; createEvent("shot_clock", "샷 클락 0초", "공격 제한 시간 종료"); }
+      saveState(); renderAll();
+    }, 1000);
+
+    renderLiveContainers();
+    renderAll();
+    showScreen(location.hash.replace("#", "") || "home");
+  </script>
+</body>
+</html>
