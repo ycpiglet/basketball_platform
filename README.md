@@ -12,6 +12,11 @@ This repository is intended to be developed with AI coding agents such as Codex.
 
 If the English and Korean requirements differ, preserve the more specific requirement and ask the product owner before deleting or narrowing scope.
 
+Derived planning documents live under `docs/requirements/`. They narrow or stage
+the source requirements for a specific goal, but they do not replace the source
+documents unless explicitly approved. Dated archive summaries preserve the prior
+context whenever a new requirements document is created.
+
 ## Product Goal
 
 Build a reliable field tool that amateur basketball scorekeepers, team managers, tournament organizers, players, and community users can actually use during real games.
@@ -181,8 +186,52 @@ The repository now contains an initial Phase 1 skeleton. Phase 2 feature directo
 |- docs/
 |  |- architecture/initial_project_plan.md
 |  |- operations/local_development.md
+|  |- requirements/
+|- harness/
+|  |- agents/
+|  |- workflows/
+|  |- skills/
+|  |- sandbox/
+|  |- compound/
+|  |- runs/
+|  |- test_cases/
+|  |- validation/
+|  |- decisions/
+|  |- issue_log/
+|  |- debugging/
+|  |- deployment/
+|- summary/
+|  |- status.md
 |- scripts/
 ```
+
+## Harness Engineering Records
+
+Use `harness/` for multi-agent planning, generation, evaluation, debugging,
+testing, validation, and deployment notes. It is a documentation and coordination
+workspace, not a replacement for product requirements or executable tests.
+
+Minimum roles are defined in `harness/agents/`:
+
+- Planner: requirement trace, phase classification, plan, and acceptance criteria.
+- Generator: implementation notes, changed files, debug notes, and command
+  summaries.
+- Evaluator: test report, review findings, and verification decision.
+- Coordinator: run setup, handoff alignment, and final summary.
+
+Reusable project skills live in `harness/skills/`. Apply
+`harness/skills/python_coding/SKILL.md` before writing, reviewing, or
+refactoring Python code, including backend, tests, scripts, PDF parsing, and
+integration work.
+
+Use `harness/sandbox/` for isolated experiments and spikes. Use
+`harness/compound/` to synthesize durable lessons, current state, reusable
+patterns, and mistakes to avoid. New harness documents should include YAML
+frontmatter following `harness/metadata_schema.md`.
+
+For each substantial task, create a run folder under
+`harness/runs/YYYY-MM-DD_short_slug/` from `harness/runs/_template/`, then update
+`summary/status.md` when the run closes.
 
 ## Current Frontend Placeholder Routes
 
