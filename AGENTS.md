@@ -387,6 +387,21 @@ Minimum role files:
 - `harness/agents/evaluator.md`
 - `harness/agents/coordinator.md`
 
+Minimized operating role files:
+
+- `harness/agents/founder_product_lead.md` - consolidates CEO/Founder, Product Manager, and Project Manager scope decisions.
+- `harness/agents/engineering_manager.md` - owns hierarchy, assignments, escalation, and delivery coordination.
+- `harness/agents/lead_staff_engineer.md` - consolidates Lead Engineer and Staff Engineer architecture and conservative implementation review.
+- `harness/agents/senior_designer.md` - owns field usability, responsive UI, accessibility, and visual QA.
+- `harness/agents/qa_debugger.md` - consolidates QA Lead, Debugger, and Beta Tester/User adversarial testing and regression capture.
+- `harness/agents/security_release_engineer.md` - consolidates Security Engineer and CI/CD Engineer release, privacy, permission, and operational gates.
+- `harness/agents/technical_writer.md` - owns durable records, handoffs, compound synthesis, and status updates.
+
+Each operating role has a matching `SKILL.md` under `harness/skills/`. Read the
+matching skill whenever that role owns a decision, review, report, or handoff.
+If confirmation is needed, record the question and ask the correct decision owner
+instead of guessing.
+
 Run folders should use:
 
 ```text
@@ -409,6 +424,7 @@ The repository currently uses this Phase 1-oriented layout:
 - `docs/operations/` - local development and operations notes.
 - `harness/` - multi-agent planning, generation, evaluation, validation, and handoff records.
 - `harness/skills/python_coding/SKILL.md` - project-local Python coding standard for agents.
+- `harness/skills/*/SKILL.md` - role and domain skills for operating agents.
 - `harness/sandbox/` - isolated experiments and promotion reviews.
 - `harness/compound/` - searchable synthesized knowledge, lessons, patterns, and current state.
 - `docs/requirements/` - dated derived requirements and archive summaries.

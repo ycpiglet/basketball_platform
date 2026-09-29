@@ -1,5 +1,23 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import { pilotGame } from '@/shared/demo/pilotGame';
+import { useScoreboardGame } from './useScoreboardGame';
+
+const {
+  teams,
+  statusLabel,
+  clockLabel,
+  quarterLabel,
+  isLoading,
+  errorMessage,
+  refresh,
+  startPolling,
+} = useScoreboardGame();
+
+onMounted(() => {
+  void refresh();
+  startPolling();
+});
 </script>
 
 <template>
@@ -11,7 +29,22 @@ import { pilotGame } from '@/shared/demo/pilotGame';
       <div class="display-meta">
         <span class="status-chip live">{{ pilotGame.title }}</span>
         <span class="status-chip">{{ pilotGame.venue }}</span>
-        <span class="status-chip">{{ pilotGame.status }}</span>
+        <span class="status-chip">{{ statusLabel }}</span>
+      </div>
+
+      <div
+        v-if="errorMessage"
+        class="display-meta"
+      >
+        <span class="status-chip">{{ errorMessage }}</span>
+        <button
+          class="btn-ghost"
+          type="button"
+          :disabled="isLoading"
+          @click="refresh"
+        >
+          재시도
+        </button>
       </div>
 
       <div
@@ -19,28 +52,28 @@ import { pilotGame } from '@/shared/demo/pilotGame';
         aria-label="Current game score"
       >
         <article class="display-team">
-          <span class="caption">{{ pilotGame.teams.home.label }}</span>
-          <strong class="display-team-name">{{ pilotGame.teams.home.name }}</strong>
-          <strong class="display-score home-score">{{ pilotGame.teams.home.score }}</strong>
+          <span class="caption">{{ teams[0].label }}</span>
+          <strong class="display-team-name">{{ teams[0].name }}</strong>
+          <strong class="display-score home-score">{{ teams[0].score }}</strong>
           <div class="metric-grid three">
             <span class="metric-tile">
               <span class="metric-label">FOUL</span>
-              <strong class="metric-value">{{ pilotGame.teams.home.fouls }}</strong>
+              <strong class="metric-value">{{ teams[0].fouls }}</strong>
             </span>
             <span class="metric-tile">
               <span class="metric-label">T.O</span>
-              <strong class="metric-value">{{ pilotGame.teams.home.timeouts }}</strong>
+              <strong class="metric-value">{{ teams[0].timeouts }}</strong>
             </span>
             <span class="metric-tile">
               <span class="metric-label">BALL</span>
-              <strong class="metric-value">{{ pilotGame.possession === 'home' ? 'YES' : '-' }}</strong>
+              <strong class="metric-value">-</strong>
             </span>
           </div>
         </article>
 
         <aside class="display-clock">
-          <span class="status-chip live">{{ pilotGame.quarter }}</span>
-          <strong class="game-clock">{{ pilotGame.clock }}</strong>
+          <span class="status-chip live">{{ quarterLabel }}</span>
+          <strong class="game-clock">{{ clockLabel }}</strong>
           <div class="shot-clock">
             <span class="caption">SHOT</span>
             <strong class="shot-number">{{ pilotGame.shotClock }}</strong>
@@ -48,21 +81,21 @@ import { pilotGame } from '@/shared/demo/pilotGame';
         </aside>
 
         <article class="display-team">
-          <span class="caption">{{ pilotGame.teams.away.label }}</span>
-          <strong class="display-team-name">{{ pilotGame.teams.away.name }}</strong>
-          <strong class="display-score away-score">{{ pilotGame.teams.away.score }}</strong>
+          <span class="caption">{{ teams[1].label }}</span>
+          <strong class="display-team-name">{{ teams[1].name }}</strong>
+          <strong class="display-score away-score">{{ teams[1].score }}</strong>
           <div class="metric-grid three">
             <span class="metric-tile">
               <span class="metric-label">FOUL</span>
-              <strong class="metric-value">{{ pilotGame.teams.away.fouls }}</strong>
+              <strong class="metric-value">{{ teams[1].fouls }}</strong>
             </span>
             <span class="metric-tile">
               <span class="metric-label">T.O</span>
-              <strong class="metric-value">{{ pilotGame.teams.away.timeouts }}</strong>
+              <strong class="metric-value">{{ teams[1].timeouts }}</strong>
             </span>
             <span class="metric-tile">
               <span class="metric-label">BALL</span>
-              <strong class="metric-value">{{ pilotGame.possession === 'away' ? 'YES' : '-' }}</strong>
+              <strong class="metric-value">-</strong>
             </span>
           </div>
         </article>

@@ -27,7 +27,7 @@ filter, and synthesize context without rereading every file.
 ---
 id: short_unique_id
 title: Human Readable Title
-type: run | sandbox | compound | issue | debug | decision | test_case | requirements | status | template
+type: run | sandbox | compound | issue | debug | decision | test_case | requirements | status | template | agent | skill | workflow
 category: harness | backend | frontend | database | documents | deployment | field_pilot | product
 status: draft | active | complete | superseded | blocked | rejected
 created: YYYY-MM-DD
@@ -43,7 +43,7 @@ related_runs:
 ## Optional Fields
 
 ```yaml
-owner: planner | generator | evaluator | coordinator | backend | frontend | product
+owner: planner | generator | evaluator | coordinator | founder_product_lead | engineering_manager | lead_staff_engineer | senior_designer | qa_debugger | security_release_engineer | technical_writer | backend | frontend | product
 related_files:
   - path/to/file
 related_issues:
@@ -80,4 +80,3 @@ rg "test_environment" harness
 rg "status: blocked" harness
 rg "field_pilot" harness docs/requirements summary
 ```
-

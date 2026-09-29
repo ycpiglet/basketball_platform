@@ -28,6 +28,8 @@ node_modules/
 coverage/
 frontend/dist/
 frontend/.vite/
+frontend/playwright-report/
+frontend/test-results/
 
 # Logs and local data
 *.log

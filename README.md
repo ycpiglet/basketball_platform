@@ -219,6 +219,23 @@ Minimum roles are defined in `harness/agents/`:
 - Evaluator: test report, review findings, and verification decision.
 - Coordinator: run setup, handoff alignment, and final summary.
 
+The minimized operating role set is also defined in `harness/agents/` with
+matching skills under `harness/skills/`:
+
+- Founder Product Lead: CEO/Founder, Product Manager, and Project Manager scope
+  decisions.
+- Engineering Manager: hierarchy, assignment, escalation, and delivery
+  coordination.
+- Lead Staff Engineer: Lead Engineer and Staff Engineer architecture,
+  implementation direction, and conservative review.
+- Senior Designer: field usability, responsive UI, accessibility, and visual QA.
+- QA Debugger: QA Lead, Debugger, and Beta Tester/User adversarial testing and
+  regression capture.
+- Security Release Engineer: Security Engineer and CI/CD Engineer release,
+  permission, privacy, and operational gates.
+- Technical Writer: handoffs, durable records, compound synthesis, and status
+  updates.
+
 Reusable project skills live in `harness/skills/`. Apply
 `harness/skills/python_coding/SKILL.md` before writing, reviewing, or
 refactoring Python code, including backend, tests, scripts, PDF parsing, and

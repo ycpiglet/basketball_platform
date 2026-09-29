@@ -1,5 +1,63 @@
 <script setup lang="ts">
-import { pilotGame, pilotTeams } from '@/shared/demo/pilotGame';
+import { onMounted } from 'vue';
+import { pilotGame } from '@/shared/demo/pilotGame';
+import type { TeamSide } from './scoreboardApi';
+import { useScoreboardGame } from './useScoreboardGame';
+
+const {
+  state,
+  teams,
+  eventRows,
+  statusLabel,
+  clockLabel,
+  quarterLabel,
+  isFinal,
+  isClockRunning,
+  isLoading,
+  isActionPending,
+  errorMessage,
+  ensureGame,
+  refresh,
+  score,
+  teamFoul,
+  playerFoul,
+  timeout,
+  correction,
+  start,
+  stop,
+  nextQuarter,
+  finalize,
+} = useScoreboardGame();
+
+onMounted(() => {
+  void ensureGame();
+});
+
+function isControlDisabled(): boolean {
+  return isLoading.value || isActionPending.value || isFinal.value || !state.value;
+}
+
+function isClockActionDisabled(): boolean {
+  return isLoading.value || isActionPending.value || isFinal.value || !state.value;
+}
+
+function correctTeamScore(team: TeamSide): void {
+  const currentScore = team === 'home' ? state.value?.home.score : state.value?.away.score;
+  const scoreInput = window.prompt('정정할 점수를 입력하세요.', String(currentScore ?? 0));
+
+  if (scoreInput === null) {
+    return;
+  }
+
+  const correctedScore = Number(scoreInput);
+  const reason = window.prompt('정정 사유를 입력하세요.', 'Scorekeeper correction');
+
+  if (!Number.isInteger(correctedScore) || correctedScore < 0 || !reason) {
+    return;
+  }
+
+  void correction(team, correctedScore, reason);
+}
 </script>
 
 <template>
@@ -17,11 +75,38 @@ import { pilotGame, pilotTeams } from '@/shared/demo/pilotGame';
         </div>
         <aside class="panel">
           <div class="split-row">
-            <span class="status-chip live">{{ pilotGame.status }}</span>
-            <span class="caption">{{ pilotGame.syncStatus }}</span>
+            <span class="status-chip live">{{ statusLabel }}</span>
+            <span class="caption">
+              {{ isLoading ? 'Backend 상태 불러오는 중' : 'Backend API 연결됨' }}
+            </span>
           </div>
+          <button
+            class="btn-ghost"
+            type="button"
+            :disabled="isLoading || isActionPending"
+            @click="ensureGame"
+          >
+            경기 상태 준비
+          </button>
         </aside>
       </header>
+
+      <section
+        v-if="errorMessage"
+        class="panel error-card"
+      >
+        <div class="split-row">
+          <strong>{{ errorMessage }}</strong>
+          <button
+            class="btn-ghost"
+            type="button"
+            :disabled="isLoading"
+            @click="ensureGame"
+          >
+            재시도
+          </button>
+        </div>
+      </section>
 
       <section
         class="live-box-score"
@@ -29,66 +114,66 @@ import { pilotGame, pilotTeams } from '@/shared/demo/pilotGame';
       >
         <article class="team-panel home">
           <div class="team-header">
-            <span class="team-logo">{{ pilotGame.teams.home.shortName }}</span>
+            <span class="team-logo">{{ teams[0].shortName }}</span>
             <div>
               <p class="caption">
-                {{ pilotGame.teams.home.label }}
+                {{ teams[0].label }}
               </p>
-              <h2>{{ pilotGame.teams.home.name }}</h2>
+              <h2>{{ teams[0].name }}</h2>
             </div>
           </div>
-          <strong class="score-number home-score">{{ pilotGame.teams.home.score }}</strong>
+          <strong class="score-number home-score">{{ teams[0].score }}</strong>
           <div class="metric-grid three">
             <div class="metric-tile">
               <span class="metric-label">파울</span>
-              <strong class="metric-value">{{ pilotGame.teams.home.fouls }}</strong>
+              <strong class="metric-value">{{ teams[0].fouls }}</strong>
             </div>
             <div class="metric-tile">
               <span class="metric-label">타임아웃</span>
-              <strong class="metric-value">{{ pilotGame.teams.home.timeouts }}</strong>
+              <strong class="metric-value">{{ teams[0].timeouts }}</strong>
             </div>
             <div class="metric-tile">
               <span class="metric-label">선수</span>
-              <strong class="metric-value">{{ pilotGame.teams.home.players.length }}</strong>
+              <strong class="metric-value">{{ teams[0].players.length }}</strong>
             </div>
           </div>
         </article>
 
         <aside class="game-core">
-          <span class="status-chip live">{{ pilotGame.quarter }}</span>
-          <strong class="game-clock">{{ pilotGame.clock }}</strong>
+          <span class="status-chip live">{{ quarterLabel }}</span>
+          <strong class="game-clock">{{ clockLabel }}</strong>
           <div class="shot-clock">
             <span class="caption">SHOT</span>
             <strong class="shot-number">{{ pilotGame.shotClock }}</strong>
           </div>
           <p class="caption">
-            소유권: {{ pilotGame.teams[pilotGame.possession].shortName }}
+            {{ isClockRunning ? '경기 시간 진행 중' : '경기 시간 정지' }}
           </p>
         </aside>
 
         <article class="team-panel away">
           <div class="team-header">
-            <span class="team-logo">{{ pilotGame.teams.away.shortName }}</span>
+            <span class="team-logo">{{ teams[1].shortName }}</span>
             <div>
               <p class="caption">
-                {{ pilotGame.teams.away.label }}
+                {{ teams[1].label }}
               </p>
-              <h2>{{ pilotGame.teams.away.name }}</h2>
+              <h2>{{ teams[1].name }}</h2>
             </div>
           </div>
-          <strong class="score-number away-score">{{ pilotGame.teams.away.score }}</strong>
+          <strong class="score-number away-score">{{ teams[1].score }}</strong>
           <div class="metric-grid three">
             <div class="metric-tile">
               <span class="metric-label">파울</span>
-              <strong class="metric-value">{{ pilotGame.teams.away.fouls }}</strong>
+              <strong class="metric-value">{{ teams[1].fouls }}</strong>
             </div>
             <div class="metric-tile">
               <span class="metric-label">타임아웃</span>
-              <strong class="metric-value">{{ pilotGame.teams.away.timeouts }}</strong>
+              <strong class="metric-value">{{ teams[1].timeouts }}</strong>
             </div>
             <div class="metric-tile">
               <span class="metric-label">선수</span>
-              <strong class="metric-value">{{ pilotGame.teams.away.players.length }}</strong>
+              <strong class="metric-value">{{ teams[1].players.length }}</strong>
             </div>
           </div>
         </article>
@@ -96,7 +181,7 @@ import { pilotGame, pilotTeams } from '@/shared/demo/pilotGame';
 
       <section class="control-grid">
         <article
-          v-for="team in pilotTeams"
+          v-for="team in teams"
           :key="`${team.side}-controls`"
           :class="['team-panel', team.side]"
         >
@@ -113,18 +198,24 @@ import { pilotGame, pilotTeams } from '@/shared/demo/pilotGame';
             <button
               class="score-btn"
               type="button"
+              :disabled="isControlDisabled()"
+              @click="score(team.side, 1)"
             >
               +1
             </button>
             <button
               class="score-btn"
               type="button"
+              :disabled="isControlDisabled()"
+              @click="score(team.side, 2)"
             >
               +2
             </button>
             <button
               class="score-btn"
               type="button"
+              :disabled="isControlDisabled()"
+              @click="score(team.side, 3)"
             >
               +3
             </button>
@@ -133,67 +224,85 @@ import { pilotGame, pilotTeams } from '@/shared/demo/pilotGame';
             <button
               class="score-btn secondary"
               type="button"
+              :disabled="isControlDisabled()"
+              @click="teamFoul(team.side)"
             >
               팀 파울
             </button>
             <button
               class="score-btn secondary"
               type="button"
+              :disabled="isControlDisabled()"
+              @click="timeout(team.side)"
             >
               타임아웃
             </button>
             <button
               class="btn-warn"
               type="button"
+              :disabled="isControlDisabled()"
+              @click="correctTeamScore(team.side)"
             >
               점수 정정
             </button>
             <button
               class="btn-danger"
               type="button"
+              :disabled="isControlDisabled()"
+              @click="playerFoul(team.side)"
             >
-              입력 취소
+              개인 파울
             </button>
           </div>
         </article>
 
         <aside class="timer-panel">
           <div class="timer-face">
-            <span class="status-chip live">{{ pilotGame.quarter }}</span>
-            <strong class="game-clock">{{ pilotGame.clock }}</strong>
+            <span class="status-chip live">{{ quarterLabel }}</span>
+            <strong class="game-clock">{{ clockLabel }}</strong>
             <p class="caption">
-              경기 시간은 backend 연결 전 demo state입니다.
+              {{ statusLabel }}
             </p>
           </div>
           <div class="timer-button-grid">
             <button
               class="btn-success"
               type="button"
+              :disabled="isClockActionDisabled()"
+              @click="start"
             >
               시작
             </button>
             <button
               class="btn-danger"
               type="button"
+              :disabled="isClockActionDisabled()"
+              @click="stop"
             >
               정지
             </button>
             <button
               class="btn-ghost"
               type="button"
+              :disabled="isClockActionDisabled()"
+              @click="nextQuarter"
             >
               쿼터 +
             </button>
             <button
               class="btn-ghost"
               type="button"
+              :disabled="isLoading || isActionPending"
+              @click="refresh"
             >
-              24초 리셋
+              새로고침
             </button>
           </div>
           <button
             class="btn-dark"
             type="button"
+            :disabled="isClockActionDisabled()"
+            @click="finalize"
           >
             경기 종료
           </button>
@@ -217,7 +326,7 @@ import { pilotGame, pilotTeams } from '@/shared/demo/pilotGame';
         </div>
         <div class="event-list">
           <div
-            v-for="event in pilotGame.events"
+            v-for="event in eventRows"
             :key="`${event.time}-${event.text}`"
             class="event-row"
           >

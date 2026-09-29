@@ -9,13 +9,18 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "e2e": "playwright test"
   },
   "dependencies": {
+    "@sentry/vue": "^10.53.1",
+    "@supabase/supabase-js": "^2.105.4",
     "vue": "latest",
     "vue-router": "latest"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@sentry/vite-plugin": "^5.3.0",
     "@types/node": "latest",
     "@typescript-eslint/eslint-plugin": "latest",
     "@typescript-eslint/parser": "latest",
@@ -24,6 +29,7 @@
     "eslint": "latest",
     "eslint-plugin-vue": "latest",
     "jsdom": "latest",
+    "rollup": "^4.60.3",
     "typescript": "latest",
     "vite": "latest",
     "vitest": "latest",

@@ -22,6 +22,13 @@ harness/
 |- README.md
 |- agents/
 |  |- README.md
+|  |- founder_product_lead.md
+|  |- engineering_manager.md
+|  |- lead_staff_engineer.md
+|  |- senior_designer.md
+|  |- qa_debugger.md
+|  |- security_release_engineer.md
+|  |- technical_writer.md
 |  |- coordinator.md
 |  |- planner.md
 |  |- generator.md
@@ -32,6 +39,13 @@ harness/
 |  |- plan_work_review_compound.md
 |- skills/
 |  |- README.md
+|  |- founder_product_lead/
+|  |- engineering_manager/
+|  |- lead_staff_engineer/
+|  |- senior_designer/
+|  |- qa_debugger/
+|  |- security_release_engineer/
+|  |- technical_writer/
 |  |- python_coding/
 |  |  |- SKILL.md
 |- sandbox/
@@ -76,18 +90,36 @@ harness/
 - Keep files short enough to scan. Link to source files, test output, PRs, or
   issue IDs instead of pasting long logs.
 
+## Operating Roles
+
+The minimized operating team has seven role agents:
+
+- Founder Product Lead
+- Engineering Manager
+- Lead Staff Engineer
+- Senior Designer
+- QA Debugger
+- Security Release Engineer
+- Technical Writer
+
+The original Planner, Generator, Evaluator, and Coordinator files remain workflow
+lanes used inside the plan-work-review-compound loop.
+
 ## Minimum Agent Loop
 
 1. Coordinator opens or updates a folder under `harness/runs/`.
-2. Planner reads `summary/status.md`, checks relevant records in
+2. Engineering Manager assigns the operating owners for the task.
+3. Planner reads `summary/status.md`, checks relevant records in
    `harness/compound/`, checks `harness/skills/`, then fills `00_context.md` and
    `01_plan.md`.
-3. If the approach is uncertain, use `harness/sandbox/` before product edits.
-4. Generator records implementation notes in `02_work_log.md`, and any blocking
+4. If the approach is uncertain, use `harness/sandbox/` before product edits.
+5. Generator records implementation notes in `02_work_log.md`, and any blocking
    issues in `03_issue_log.md` or `04_debug_log.md`.
-5. Evaluator writes `05_test_report.md` and `06_evaluation.md`.
-6. Coordinator creates or updates compound records for durable lessons.
-7. Coordinator updates `08_final_summary.md` and `summary/status.md`.
+6. QA Debugger and Security Release Engineer add test, defect, CI, security, and
+   release-gate evidence when their domains are touched.
+7. Evaluator writes `05_test_report.md` and `06_evaluation.md`.
+8. Technical Writer creates or updates compound records for durable lessons.
+9. Coordinator updates `08_final_summary.md` and `summary/status.md`.
 
 ## Sandbox And Compound
 
@@ -107,6 +139,8 @@ Reusable project skills live under `harness/skills/`.
   refactoring Python code, including FastAPI backend code, repositories,
   services, models, schemas, tests, scripts, document processing, and
   integrations.
+- Use each operating role's `SKILL.md` when that role owns a decision, review,
+  report, or handoff.
 - A skill is an execution rule for agents. It does not replace the product
   requirements, does not authorize Phase 2 scope, and does not move permission
   checks out of backend/API code.

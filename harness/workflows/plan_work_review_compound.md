@@ -28,6 +28,11 @@ Use this workflow for substantial tasks.
 - Create or update a run folder under `harness/runs/`.
 - Record requirement trace, phase, permissions, logging, tests, and reuse
   targets.
+- Engineering Manager assigns affected operating roles and records who owns
+  product, architecture, design, QA/debug, security/release, and documentation
+  decisions.
+- Founder Product Lead confirms product scope when requirements conflict or
+  behavior is ambiguous.
 
 ## 2. Sandbox When Uncertain
 
@@ -40,12 +45,19 @@ Use this workflow for substantial tasks.
 - Implement narrowly against the plan.
 - Reuse existing services, docs, templates, and patterns where possible.
 - Record changed files and command summaries in the run.
+- Lead Staff Engineer keeps implementation conservative and records technical
+  decisions or rejected approaches.
+- Senior Designer reviews field usability when UI behavior changes.
 
 ## 4. Review
 
 - Run existing test commands.
 - Record pass/fail results and residual risk.
 - Identify repeated issues, failed assumptions, and reusable decisions.
+- QA Debugger tries normal, boundary, negative, interrupted, repeated, and
+  beta-user paths. Confirmed bugs must become regression cases.
+- Security Release Engineer reviews permission, privacy, CI/CD, dependency, and
+  release-gate risks when relevant.
 
 ## 5. Compound
 
@@ -53,9 +65,10 @@ Use this workflow for substantial tasks.
 - Include YAML frontmatter.
 - State `reuse`, `avoid`, and `next_actions`.
 - Mark obsolete records as `superseded`; do not delete them.
+- Technical Writer keeps compound records short, searchable, and linked to the
+  run evidence.
 
 ## 6. Status
 
 - Update `summary/status.md` only with the current direction, latest run,
   active derived requirements, important compound records, and open items.
-

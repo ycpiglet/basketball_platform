@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh auth *)",
+      "Bash(sudo apt install gh -y)",
+      "Bash(gh *)",
+      "Bash(git remote *)",
+      "Bash(git pull *)",
+      "Bash(git branch *)"
+    ]
+  }
+}

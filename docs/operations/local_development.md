@@ -15,10 +15,14 @@ npm install
 npm run dev
 npm run lint
 npm run test
+npm run e2e
 npm run build
 ```
 
 The development app defaults to `http://localhost:5173`.
+
+Playwright E2E tests start the Vite dev server automatically unless
+`PLAYWRIGHT_BASE_URL` is set.
 
 ## Backend
 
@@ -57,3 +61,9 @@ Expected JSON shape:
   "environment": "local"
 }
 ```
+
+## Cloud Integration Environment
+
+See `docs/operations/cloud_integrations.md` for Vercel, Supabase, Sentry, and
+Playwright setup details. Keep real DSNs, service role keys, and tokens out of
+version control.

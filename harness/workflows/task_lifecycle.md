@@ -9,6 +9,10 @@ Use this workflow for any task that needs more than a quick single-file change.
 - Create `harness/runs/YYYY-MM-DD_short_slug/`.
 - Copy files from `harness/runs/_template/`.
 - Fill `00_context.md` before implementation.
+- Engineering Manager assigns affected operating roles from
+  `harness/agents/README.md`.
+- Any role that needs confirmation records the question and routes it to the
+  decision owner instead of guessing.
 
 ## 2. Planning
 
@@ -40,6 +44,9 @@ risky, or likely to be discarded.
 - Record automated and manual checks in `05_test_report.md`.
 - Record review findings and pass/fail decision in `06_evaluation.md`.
 - Identify durable lessons for `harness/compound/`.
+- QA Debugger records confirmed defects as regression cases.
+- Security Release Engineer records CI/CD, permission, privacy, and release-gate
+  evidence when relevant.
 
 ## 5. Compound
 
@@ -48,6 +55,8 @@ risky, or likely to be discarded.
 - Include YAML frontmatter.
 - State what to reuse, what to avoid, and what to do next.
 - Mark obsolete compound records as `superseded`; do not delete them.
+- Technical Writer verifies compound records are linked from the run summary
+  when they affect future work.
 
 ## 6. Deployment Readiness
 

@@ -7,9 +7,11 @@ from app.core.config import get_settings
 from app.core.exception_handlers import http_exception_handler, validation_exception_handler
 from app.core.logging import configure_logging
 from app.core.middleware import request_context_middleware
+from app.core.sentry import initialize_sentry
 
 settings = get_settings()
 configure_logging()
+initialize_sentry(settings)
 
 app = FastAPI(
     title=settings.app_name,

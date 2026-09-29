@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     )
     mongodb_uri: str = "mongodb://localhost:27017/basketball_platform"
     log_level: str = "INFO"
+    sentry_dsn: str | None = None
+    sentry_environment: str | None = None
+    sentry_release: str | None = None
+    sentry_traces_sample_rate: float = 0.0
+    sentry_profiles_sample_rate: float = 0.0
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    supabase_service_role_key: str | None = None
 
 
 @lru_cache
